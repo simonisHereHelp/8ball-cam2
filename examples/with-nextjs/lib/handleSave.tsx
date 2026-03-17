@@ -19,7 +19,7 @@ export interface SelectedSubfolderMeta {
 
 /**
  * Saves the current images + summary via /api/save-set.
- * The server (via ChatGPT) is responsible for deriving setName.
+ * The server-side LLM router is responsible for deriving setName.
  */
 export const handleSave = async ({
   images,

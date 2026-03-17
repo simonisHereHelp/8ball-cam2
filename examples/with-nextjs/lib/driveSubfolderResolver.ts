@@ -74,9 +74,8 @@ async function inferTopicFromLLM(
   subfolders: ActiveSubfolder[],
 ): Promise<string | null> {
   const prompt = await fetchPrompt();
-  const apiKey = process.env.OPENAI_API_KEY;
 
-  if (!prompt || !apiKey) return null;
+  if (!prompt) return null;
 
   const topics = subfolders.map((folder) => ({
     topic: folder.topic,
@@ -88,27 +87,21 @@ async function inferTopicFromLLM(
     .replace("{{SUMMARY}}", summary.trim())
     .replace("{{TOPICS}}", JSON.stringify(topics));
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
+  try {
+    const content = await GPT_Router.getChatCompletionText({
       messages: [
         { role: "system", content: prompt.system },
         { role: "user", content: userPrompt },
       ],
       temperature: 0,
       max_tokens: 16,
-    }),
-  });
+    });
 
-  if (!res.ok) return null;
-
-  const json = await res.json().catch(() => null);
-  return json?.choices?.[0]?.message?.content?.trim() || null;
+    return content || null;
+  } catch (err) {
+    console.warn("Failed to infer subfolder topic from local LLM:", err);
+    return null;
+  }
 }
 
 export const resolveDriveFolder = async (

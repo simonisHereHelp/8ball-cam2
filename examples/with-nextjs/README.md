@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# with-nextjs
 
-## Getting Started
+This Next.js example keeps the existing capture -> summarize -> route -> save workflow, but the LLM backend is now a local `llama.cpp` service exposed through Cloudflare at `https://lenovo.ishere.help`.
 
-First, run the development server:
+## LLM configuration
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Set this environment variable for the app:
+
+```env
+LLAMA_CPP_BASE_URL=https://lenovo.ishere.help
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If `LLAMA_CPP_BASE_URL` is omitted, the app defaults to `https://lenovo.ishere.help` and calls the OpenAI-compatible endpoint at `/v1/chat/completions`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Getting started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Notes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- All former OpenAI chat-completion calls in the example app now route through `examples/with-nextjs/lib/gptRouter.ts`.
+- Google Drive reads/writes and NextAuth behavior are unchanged.
+- The summarize route still sends images using the OpenAI-compatible message shape expected by `llama.cpp`. For best results, the endpoint must support the image inputs your selected model can handle.

@@ -3,9 +3,87 @@ import fs from "fs/promises";
 import path from "path";
 import { auth } from "@/auth";
 
+type ChatMessage =
+  | { role: "system" | "user" | "assistant"; content: string }
+  | {
+      role: "system" | "user" | "assistant";
+      content: Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      >;
+    };
+
 export class GPT_Router {
+  static getChatEndpoint(): string {
+    const rawBase =
+      process.env.LLAMA_CPP_BASE_URL ||
+      process.env.LOCAL_LLM_BASE_URL ||
+      "https://lenovo.ishere.help";
+    const trimmedBase = rawBase.replace(/\/+$/, "");
+
+    return trimmedBase.endsWith("/v1/chat/completions")
+      ? trimmedBase
+      : `${trimmedBase}/v1/chat/completions`;
+  }
+
+  static getModelName(): string {
+    return (
+      process.env.LLAMA_CPP_MODEL ||
+      process.env.LOCAL_LLM_MODEL ||
+      "DeepSeek-R1-Distill-Qwen-7B"
+    );
+  }
+
+  static getDefaultHeaders(): HeadersInit {
+    const apiKey = process.env.LLAMA_CPP_API_KEY || process.env.LOCAL_LLM_API_KEY;
+
+    return apiKey
+      ? {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        }
+      : {
+          "Content-Type": "application/json",
+        };
+  }
+
+  static async createChatCompletion(params: {
+    messages: ChatMessage[];
+    temperature?: number;
+    max_tokens?: number;
+  }) {
+    const response = await fetch(this.getChatEndpoint(), {
+      method: "POST",
+      headers: this.getDefaultHeaders(),
+      body: JSON.stringify({
+        model: this.getModelName(),
+        messages: params.messages,
+        temperature: params.temperature ?? 0,
+        ...(params.max_tokens ? { max_tokens: params.max_tokens } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      const details = await response.text().catch(() => "");
+      throw new Error(
+        `Local LLM request failed (${response.status}): ${details || response.statusText}`,
+      );
+    }
+
+    return response.json();
+  }
+
+  static async getChatCompletionText(params: {
+    messages: ChatMessage[];
+    temperature?: number;
+    max_tokens?: number;
+  }): Promise<string> {
+    const data = await this.createChatCompletion(params);
+    return data?.choices?.[0]?.message?.content?.trim() || "";
+  }
+
   /**
-   * 通用 Fetch 工具：根據 ID 獲取檔案並解析為 JSON
+   * Generic fetch utility: resolve by local path or Drive file ID and parse JSON.
    */
   static async _fetchFile(fileID: string, useAuth: boolean = false): Promise<any> {
     if (!fileID) throw new Error("File ID is required");
@@ -25,7 +103,6 @@ export class GPT_Router {
       const accessToken = (session as any)?.accessToken;
       if (!accessToken) throw new Error("Missing Google Drive access token");
 
-      // 使用 API 格式讀取私有媒體內容
       url = `https://www.googleapis.com/drive/v3/files/${fileID}?alt=media&supportsAllDrives=true`;
       headers["Authorization"] = `Bearer ${accessToken}`;
     }
@@ -44,7 +121,7 @@ export class GPT_Router {
   }
 
   /**
-   * 獲取 System Prompt
+   * Get the configured system prompt.
    */
   static async getSystemPrompt(promptFileID: string): Promise<string> {
     const config = await this._fetchFile(promptFileID);
@@ -52,9 +129,7 @@ export class GPT_Router {
   }
 
   /**
-   * 通用的 User Prompt 產生器
-   * @param promptFileID - 模板 ID (summary 或 setName)
-   * @param options - 包含 bibleData 或 summary 的物件
+   * Build the configured user prompt with canonical data or summary text injected.
    */
   static async getUserPrompt(
     promptFileID: string,
@@ -62,40 +137,34 @@ export class GPT_Router {
       bibleData?: any;
       summary?: string;
       wordTarget?: number;
-    }
+    },
   ): Promise<string> {
     const config = await this._fetchFile(promptFileID);
     let userPrompt = config.user;
     const { bibleData, summary, wordTarget } = options;
 
-    // 1. 處理 Bible 數據替換 (用於 Summarize 階段)
     if (bibleData) {
-      // 1. 提取標準名稱列表 (用於輸出的唯一選項)
       const issuerNames = bibleData.issuers?.map((i: any) => i.master) || [];
       const typeNames = bibleData.typeOfDoc?.map((t: any) => t.master) || [];
       const actionNames = bibleData.action?.map((a: any) => a.master) || [];
 
-      // 2. 提取「標準名與別名」的對照參考 (用於加強 GPT 的比對能力)
-      // 格式如:{"兆豐": ["兆豐銀行", "Mega Bank"], "勞保局": ["勞工保險局"]}
       const issuerMapping =
         bibleData.issuers?.reduce((acc: any, curr: any) => {
           acc[curr.master] = curr.aliases || [];
           return acc;
         }, {}) || {};
 
-      // 3. 執行替換
       userPrompt = userPrompt
         .replace("{{ISSUER_NAME}}", JSON.stringify(issuerNames))
         .replace("{{ISSUER_ALIASES}}", JSON.stringify(issuerMapping))
         .replace("{{TYPE_OF_DOC}}", JSON.stringify(typeNames))
         .replace("{{ACTION}}", JSON.stringify(actionNames));
     }
-    // 處理摘要替換 (用於 SetName 階段)
+
     if (summary) {
       userPrompt = userPrompt.replace("{{SUMMARY}}", summary.trim());
     }
 
-    // 3. 處理字數限制 (優先序: 呼叫參數 > JSON 配置 > 硬編碼預設)
     const finalWordTarget = wordTarget || config.wordTarget || 250;
     userPrompt = userPrompt.replace("{{wordTarget}}", String(finalWordTarget));
 
@@ -103,34 +172,22 @@ export class GPT_Router {
   }
 
   /**
-   * Use GPT to extract the "Issuer Name" (the canonical master name) from a summary.
+   * Extract the issuer name from a summary using the local DeepSeek-backed endpoint.
    */
   static async getIssuerName(summary: string): Promise<string> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
-
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "你是一位精確的實體提取助手。請從提供的摘要中僅提取『寄件單位』或『機構名稱』。只需回傳名稱，不要有標點符號或解釋。如果找不到，請回傳『其他單位』。",
-          },
-          { role: "user", content: summary },
-        ],
-        temperature: 0,
-      }),
+    const content = await this.getChatCompletionText({
+      messages: [
+        {
+          role: "system",
+          content:
+            "你是一位精確的實體提取助手。請從提供的摘要中僅提取「寄件單位」或「機構名稱」。只需回傳名稱，不要有標點符號或解釋。如果找不到，請回傳「其他單位」。",
+        },
+        { role: "user", content: summary },
+      ],
+      temperature: 0,
     });
 
-    const data = await res.json();
-    return data?.choices?.[0]?.message?.content?.trim() || "其他單位";
+    return content || "其他單位";
   }
 
   static async updateCanonicals(
@@ -141,12 +198,12 @@ export class GPT_Router {
     }: {
       issuerName: string;
       issuerAlias: string;
-    }
+    },
   ) {
     const localPath = this._resolveLocalPath(fileID);
     if (localPath) {
       throw new Error(
-        "Updating local canonical files is not supported. Provide a Drive file ID via environment variable."
+        "Updating local canonical files is not supported. Provide a Drive file ID via environment variable.",
       );
     }
 
@@ -155,21 +212,18 @@ export class GPT_Router {
     const masterEntry = bibleData.issuers.find((i: any) => i.master === issuerName);
 
     if (masterEntry) {
-      // Master exists, check if alias is new
       if (issuerAlias !== issuerName && !masterEntry.aliases.includes(issuerAlias)) {
         masterEntry.aliases.push(issuerAlias);
       } else {
         return { status: "NO_CHANGE", message: "Alias already exists or matches master." };
       }
     } else {
-      // New Master
       bibleData.issuers.push({
         master: issuerName,
         aliases: issuerAlias !== issuerName ? [issuerAlias] : [],
       });
     }
 
-    // Save back to Drive
     const session = await auth();
     const accessToken = (session as any)?.accessToken;
     const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileID}?uploadType=media&supportsAllDrives=true`;
