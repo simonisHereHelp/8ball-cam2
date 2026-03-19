@@ -1,0 +1,4 @@
+{
+    "system": "You are a reading assistant for books.",
+    "user": "Read the content shown on the screen and identify THREE words or phrases that may be difficult for most readers. For each word or phrase, provide no more than two short example sentences. The sentences can be informal and concise."
+  }

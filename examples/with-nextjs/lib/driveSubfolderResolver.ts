@@ -4,11 +4,13 @@ import {
   DRIVE_FALLBACK_FOLDER_ID,
   PROMPT_DESIGNATED_SUBFOLDER_SOURCE,
 } from "./jsonCanonSources";
+import { findBestSubfolderMatch } from "./subfolderMatcher";
 
 interface ActiveSubfolder {
   topic: string;
   folderId: string;
   keywords?: string[];
+  excluded_keywords?: string[];
   description?: string;
 }
 
@@ -39,13 +41,6 @@ const normalizeSubfolderConfig = (
   const subfolders = Array.isArray(typed?.subfolders) ? typed.subfolders : [];
 
   return { subfolders, fallbackFolderId: typed?.fallbackFolderId };
-};
-
-const findKeywordMatch = (summary: string, subfolders: ActiveSubfolder[]) => {
-  const lowerSummary = summary.toLowerCase();
-  return subfolders.find((folder) =>
-    folder.keywords?.some((keyword) => lowerSummary.includes(keyword.toLowerCase())),
-  );
 };
 
 const fetchPrompt = async () => {
@@ -80,6 +75,7 @@ async function inferTopicFromLLM(
   const topics = subfolders.map((folder) => ({
     topic: folder.topic,
     keywords: folder.keywords || [],
+    excluded_keywords: folder.excluded_keywords || [],
     description: folder.description || "",
   }));
 
@@ -121,7 +117,7 @@ export const resolveDriveFolder = async (
     return { folderId: fallbackFolderPath, topic: null };
   }
 
-  const keywordMatch = findKeywordMatch(summary, subfolders);
+  const keywordMatch = findBestSubfolderMatch(summary, subfolders);
   if (keywordMatch) {
     const folderPath = buildFolderPath(
       keywordMatch.folderId || keywordMatch.topic,

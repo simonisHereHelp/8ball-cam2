@@ -1,10 +1,300 @@
 {
   "issuers": [
     {
+      "master": "兆豐",
+      "aliases": [
+        "兆豐銀行",
+        "台北兆豐銀行",
+        "兆豐國際商業銀行",
+        "Mega Bank",
+        "美國國際保險公司",
+        "ABC Auto Insurance",
+        "黃氏銀行",
+        "Lincoln Financial Group",
+        "The Home Depot",
+        "中華民國"
+      ]
+    },
+    {
+      "master": "勞保局",
+      "aliases": [
+        "勞工保險局",
+        "勞動部勞保局",
+        "勞保局辦事處",
+        "ABC Auto Insurance",
+        "兆豐銀行",
+        "兆豐國際商業銀行",
+        "國民年金保險"
+      ]
+    },
+    {
+      "master": "國保",
+      "aliases": [
+        "國民年金保險",
+        "ABC Auto Insurance",
+        "各區公所"
+      ]
+    },
+    {
+      "master": "國險",
+      "aliases": [
+        "國民年金保險",
+        "其他單位"
+      ]
+    },
+    {
       "master": "國民年金保險",
-      "aliases": ["國保", "勞保局"]
+      "aliases": [
+        "ABC Auto Insurance"
+      ]
+    },
+    {
+      "master": "Toyota Motor Sales, U.S.A., Inc.",
+      "aliases": []
+    },
+    {
+      "master": "社會局",
+      "aliases": [
+        "宜蘭縣政府",
+        "重陽敬老金發放單位",
+        "國民年金保險"
+      ]
+    },
+    {
+      "master": "Department of Motor Vehicles",
+      "aliases": [
+        "The Home Depot"
+      ]
+    },
+    {
+      "master": "Amazon.com",
+      "aliases": []
+    },
+    {
+      "master": "ABC Auto Insurance",
+      "aliases": [
+        "新北市政府"
+      ]
+    },
+    {
+      "master": "DMV",
+      "aliases": [
+        "STATE OF CALIFORNIA",
+        "兆豐國際商業銀行"
+      ]
+    },
+    {
+      "master": "北京傳述健康科技有限公司",
+      "aliases": [
+        "北京佳达健康科技有限公司",
+        "兆豐銀行"
+      ]
+    },
+    {
+      "master": "其他單位",
+      "aliases": [
+        "Donna",
+        "Katherine",
+        "ABC Auto Insurance",
+        "黃金銀行",
+        "Lincoln Financial Group",
+        "兆豐國際商業銀行",
+        "新北市政府",
+        "台北市政府",
+        "國民年金保險"
+      ]
+    },
+    {
+      "master": "哥德",
+      "aliases": [
+        "TOYOTA MOTOR SALES, U.S.A., INC.",
+        "其他單位"
+      ]
+    },
+    {
+      "master": "兆豐銀行",
+      "aliases": []
+    },
+    {
+      "master": "Geico",
+      "aliases": [
+        "其他單位"
+      ]
+    },
+    {
+      "master": "Dr. Chang",
+      "aliases": [
+        "Sprouts Farmers Market Holdings LLC"
+      ]
+    },
+    {
+      "master": "HouseUtilities",
+      "aliases": [
+        "台北市政府社會局"
+      ]
+    },
+    {
+      "master": "Prudential",
+      "aliases": [
+        "國民年金保險"
+      ]
+    },
+    {
+      "master": "Social Security",
+      "aliases": [
+        "國民年金保險"
+      ]
+    },
+    {
+      "master": "台灣房屋",
+      "aliases": [
+        "兆豐國際商業銀行"
+      ]
+    },
+    {
+      "master": "台灣證件",
+      "aliases": [
+        "新北市政府"
+      ]
+    },
+    {
+      "master": "勞工保險局",
+      "aliases": [
+        "兆豐國際商業銀行"
+      ]
+    },
+    {
+      "master": "宜蘭縣政府",
+      "aliases": [
+        "新光人壽保險股份有限公司"
+      ]
+    },
+    {
+      "master": "IRS",
+      "aliases": [
+        "新光人壽保險股份有限公司"
+      ]
+    },
+    {
+      "master": "新北市政府",
+      "aliases": []
+    },
+    {
+      "master": "兆豐國際商業銀行",
+      "aliases": []
+    },
+    {
+      "master": "台北市政府社會局",
+      "aliases": []
+    },
+    {
+      "master": "Allen Wei DDS",
+      "aliases": [
+        "Allen Wei DDS A Professional Corporation"
+      ]
+    },
+    {
+      "master": "MediCal",
+      "aliases": [
+        "San Diego County"
+      ]
+    },
+    {
+      "master": "Home Depot",
+      "aliases": [
+        "Orange Life"
+      ]
+    },
+    {
+      "master": "Vanguard",
+      "aliases": []
+    },
+    {
+      "master": "Allen W. Wu, D.D.S.",
+      "aliases": [
+        "Allen W. Wu, D.D.S., A.P.C.",
+        "Allen Wei DDS",
+        "Allen Wei DDS A Professional Corporation",
+        "Allen W Wu DDS",
+        "Allen W Wu DDS APC"
+      ]
     }
   ],
-  "typeOfDoc": [],
-  "action": []
+  "typeOfDoc": [
+    {
+      "master": "存款單",
+      "aliases": [
+        "存款憑條",
+        "入帳通知",
+        "存款證明",
+        "存單"
+      ]
+    },
+    {
+      "master": "匯款通知",
+      "aliases": [
+        "轉帳通知",
+        "匯款憑證",
+        "匯款單",
+        "Remittance Advice"
+      ]
+    },
+    {
+      "master": "廣告",
+      "aliases": [
+        "宣傳單",
+        "促銷郵件",
+        "行銷活動",
+        "DM",
+        "廣告信函"
+      ]
+    },
+    {
+      "master": "其它文件",
+      "aliases": [
+        "一般信函",
+        "雜項",
+        "未分類文件",
+        "通知書"
+      ]
+    }
+  ],
+  "action": [
+    {
+      "master": "請存檔",
+      "aliases": [
+        "供參考",
+        "存查",
+        "留存",
+        "無需行動",
+        "存檔備查"
+      ]
+    },
+    {
+      "master": "請立即繳款",
+      "aliases": [
+        "限期繳納",
+        "帳單逾期",
+        "催繳通知",
+        "請於期限內付款"
+      ]
+    },
+    {
+      "master": "請回復",
+      "aliases": [
+        "需回傳",
+        "請簽章回傳",
+        "需確認回覆",
+        "請核對"
+      ]
+    },
+    {
+      "master": "其他行動",
+      "aliases": [
+        "待辦事項",
+        "注意事項",
+        "需臨櫃辦理"
+      ]
+    }
+  ]
 }

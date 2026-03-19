@@ -11,6 +11,7 @@ export interface SubfolderOption {
   topic: string;
   folderId?: string;
   keywords?: string[];
+  excluded_keywords?: string[];
   description?: string;
 }
 

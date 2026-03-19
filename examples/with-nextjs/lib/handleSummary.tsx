@@ -7,6 +7,11 @@ export interface Image {
   file: File;
 }
 
+type SummarizeErrorResponse = {
+  error?: string;
+  hint?: string;
+};
+
 const extensionFromFile = (file: File) => {
   const nameExtension = file.name.split(".").pop()?.toLowerCase();
   if (nameExtension) return nameExtension;
@@ -88,8 +93,20 @@ export const handleSummary = async ({
     });
 
     if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || "Failed to summarize image.");
+      let message = "Failed to summarize image.";
+      const raw = await response.text().catch(() => "");
+
+      try {
+        const data = JSON.parse(raw) as SummarizeErrorResponse;
+        const parts = [data.error, data.hint].filter(Boolean);
+        if (parts.length > 0) {
+          message = parts.join(" ");
+        }
+      } catch {
+        if (raw) message = raw;
+      }
+
+      throw new Error(message);
     }
 
     const data = (await response.json()) as { summary?: string };
@@ -106,9 +123,13 @@ export const handleSummary = async ({
     return true;
   } catch (error) {
     console.error("Failed to summarize image:", error);
+    const resolvedMessage =
+      error instanceof Error && error.message.trim().length > 0
+        ? error.message
+        : "Unable to summarize the captured image. Please edit the template summary.";
     setSummary(fallbackSummary);
     setSummaryImageUrl(null);
-    setError("Unable to summarize the captured image. Please edit the template summary.");
+    setError(resolvedMessage);
     setShowSummaryOverlay(false);
     return true;
   } finally {

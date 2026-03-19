@@ -6,6 +6,9 @@ import {
   PROMPT_SUMMARY_SOURCE,
 } from "@/lib/jsonCanonSources";
 
+const isImageUnsupportedError = (message: string) =>
+  /image input is not supported|provide the mmproj/i.test(message);
+
 export async function POST(req: Request) {
   const promptId = PROMPT_SUMMARY_SOURCE;
   const canonicalFileId = CANONICALS_BIBLE_SOURCE;
@@ -46,6 +49,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ summary });
   } catch (err: any) {
     console.error("Summarize Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const message = err?.message || "Unknown summarize error";
+
+    if (isImageUnsupportedError(message)) {
+      const model = GPT_Router.getModelName();
+      return NextResponse.json(
+        {
+          code: "LOCAL_LLM_IMAGE_UNSUPPORTED",
+          error: `The local model "${model}" is running in text-only mode, so it cannot read uploaded images.`,
+          hint:
+            "Start llama-server with a vision-capable model plus --mmproj, or switch summarize to a vision backend.",
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

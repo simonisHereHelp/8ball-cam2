@@ -1,0 +1,158 @@
+[
+  {
+    "ticket": "AMZN",
+    "name": "Amazon.com, Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001018724"
+  },
+  {
+    "ticket": "BAC",
+    "name": "Bank of America Corporation",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000070858"
+  },
+  {
+    "ticket": "BIIB",
+    "name": "Biogen Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000875045"
+  },
+  {
+    "ticket": "CVX",
+    "name": "Chevron Corporation",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000093410"
+  },
+  {
+    "ticket": "EWJ",
+    "name": "iShares MSCI Japan ETF",
+    "filer": "Investment Company",
+    "CIK": "0000927971"
+  },
+  {
+    "ticket": "FXI",
+    "name": "iShares China Large-Cap ETF",
+    "filer": "Investment Company",
+    "CIK": "0001161611"
+  },
+  {
+    "ticket": "GLD",
+    "name": "SPDR Gold Trust",
+    "filer": "Trust Issuer",
+    "CIK": "0001222333"
+  },
+  {
+    "ticket": "GOOGL",
+    "name": "Alphabet Inc. (Class A)",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001652044"
+  },
+  {
+    "ticket": "HAL",
+    "name": "Halliburton Company",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000045012"
+  },
+  {
+    "ticket": "HD",
+    "name": "The Home Depot, Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000354950"
+  },
+  {
+    "ticket": "HIMS",
+    "name": "Hims & Hers Health, Inc.",
+    "filer": "Accelerated Filer",
+    "CIK": "0001773751"
+  },
+  {
+    "ticket": "HON",
+    "name": "Honeywell International Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000773840"
+  },
+  {
+    "ticket": "JNJ",
+    "name": "Johnson & Johnson",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000200406"
+  },
+  {
+    "ticket": "LLY",
+    "name": "Eli Lilly and Company",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000059478"
+  },
+  {
+    "ticket": "META",
+    "name": "Meta Platforms, Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001326801"
+  },
+  {
+    "ticket": "MSFT",
+    "name": "Microsoft Corporation",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000789019"
+  },
+  {
+    "ticket": "NVDA",
+    "name": "NVIDIA Corporation",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001045810"
+  },
+  {
+    "ticket": "ORCL",
+    "name": "Oracle Corporation",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001341439"
+  },
+  {
+    "ticket": "SLB",
+    "name": "Schlumberger Limited",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000087347"
+  },
+  {
+    "ticket": "SPACEX",
+    "name": "Space Exploration Technologies Corp.",
+    "filer": "Private Company",
+    "CIK": "0001755946"
+  },
+  {
+    "ticket": "TSLA",
+    "name": "Tesla, Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001318605"
+  },
+  {
+    "ticket": "TSM",
+    "name": "Taiwan Semiconductor Manufacturing Company Limited",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0001046179"
+  },
+  {
+    "ticket": "TTE",
+    "name": "TotalEnergies SE",
+    "filer": "Foreign Private Issuer",
+    "CIK": "0000879764"
+  },
+  {
+    "ticket": "UDN",
+    "name": "Invesco DB US Dollar Index Bearish Fund",
+    "filer": "Non-Accelerated Filer",
+    "CIK": "0001386074"
+  },
+  {
+    "ticket": "WMT",
+    "name": "Walmart Inc.",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000104169"
+  },
+  {
+    "ticket": "XOM",
+    "name": "Exxon Mobil Corporation",
+    "filer": "Large Accelerated Filer",
+    "CIK": "0000034088"
+  }
+]

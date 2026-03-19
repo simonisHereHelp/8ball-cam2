@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { handleSave } from "@/lib/handleSave";
 import { handleSummary } from "@/lib/handleSummary";
 import { normalizeFilename } from "@/lib/normalizeFilename";
+import { findBestIssuerCanon } from "@/lib/issuerCanonMatcher";
+import { findBestSubfolderMatch } from "@/lib/subfolderMatcher";
 import {
   CaptureError,
   DEFAULTS,
@@ -58,6 +60,8 @@ export const useImageCaptureState = (
   const [issuerCanonsLoading, setIssuerCanonsLoading] = useState(false);
   const [canonError, setCanonError] = useState("");
   const [selectedCanon, setSelectedCanon] = useState<IssuerCanonEntry | null>(null);
+  const [isCanonAutoSelected, setIsCanonAutoSelected] = useState(true);
+  const [isSubfolderAutoSelected, setIsSubfolderAutoSelected] = useState(true);
 
   const cameraRef = useRef<WebCameraHandler | null>(null);
   const { data: session } = useSession();
@@ -95,6 +99,8 @@ export const useImageCaptureState = (
     setIssuerCanons([]);
     setCanonError("");
     setSelectedCanon(null);
+    setIsCanonAutoSelected(true);
+    setIsSubfolderAutoSelected(true);
     setCaptureSource(initialSource);
     setIsProcessingCapture(false);
     onOpenChange?.(false);
@@ -116,6 +122,10 @@ export const useImageCaptureState = (
         setEditableSummary("");
         setSaveMessage("");
         setShowGallery(false);
+        setSelectedCanon(null);
+        setSelectedSubfolder(null);
+        setIsCanonAutoSelected(true);
+        setIsSubfolderAutoSelected(true);
         setImages((prev) => [...prev, { url: previewUrl, file: normalizedFile }]);
       } catch (err) {
         setError(err instanceof CaptureError ? err.message : "Unable to process the image.");
@@ -208,10 +218,12 @@ export const useImageCaptureState = (
 
   const selectSubfolder = useCallback((subfolder: SubfolderOption) => {
     setSelectedSubfolder(subfolder);
+    setIsSubfolderAutoSelected(false);
   }, []);
 
   const selectCanon = useCallback((canon: IssuerCanonEntry) => {
     setSelectedCanon(canon);
+    setIsCanonAutoSelected(false);
     setEditableSummary((current) =>
       applyCanonToSummary({
         canon,
@@ -220,6 +232,39 @@ export const useImageCaptureState = (
       }),
     );
   }, [draftSummary]);
+
+  useEffect(() => {
+    if (!editableSummary.trim() || !issuerCanons.length) return;
+
+    const inferredCanon = findBestIssuerCanon(editableSummary, issuerCanons);
+    if (!inferredCanon) return;
+
+    if (!selectedCanon || isCanonAutoSelected) {
+      setSelectedCanon((current) =>
+        current?.master === inferredCanon.master ? current : inferredCanon,
+      );
+      setIsCanonAutoSelected(true);
+    }
+  }, [editableSummary, issuerCanons, selectedCanon, isCanonAutoSelected]);
+
+  useEffect(() => {
+    if (!editableSummary.trim() || !availableSubfolders.length) return;
+
+    const inferredSubfolder = findBestSubfolderMatch(editableSummary, availableSubfolders);
+    if (!inferredSubfolder) return;
+
+    if (!selectedSubfolder || isSubfolderAutoSelected) {
+      setSelectedSubfolder((current) =>
+        current?.topic === inferredSubfolder.topic ? current : inferredSubfolder,
+      );
+      setIsSubfolderAutoSelected(true);
+    }
+  }, [
+    editableSummary,
+    availableSubfolders,
+    selectedSubfolder,
+    isSubfolderAutoSelected,
+  ]);
 
   // Auto-refresh canons when gallery opens
   useEffect(() => {

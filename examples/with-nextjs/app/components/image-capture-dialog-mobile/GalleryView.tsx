@@ -64,7 +64,7 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
                   onClick={() => actions.selectCanon(canon)}
                   className={`text-[10px] px-3 py-1 rounded-full border transition ${
                     state.selectedCanon?.master === canon.master
-                      ? "bg-blue-600 border-blue-400"
+                      ? "bg-blue-600 border-blue-400 text-white shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
                       : "border-white/20 text-white/70"
                   }`}
                 >
@@ -98,7 +98,7 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
                     onClick={() => actions.selectSubfolder(subfolder)}
                     className={`text-[10px] px-3 py-1 rounded-full border transition ${
                       state.selectedSubfolder?.topic === subfolder.topic
-                        ? "bg-blue-600 border-blue-400"
+                        ? "bg-blue-600 border-blue-400 text-white shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
                         : "border-white/20 text-white/70"
                     }`}
                   >
