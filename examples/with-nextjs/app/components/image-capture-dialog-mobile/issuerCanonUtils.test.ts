@@ -37,12 +37,12 @@ test("applyCanonToSummary seeds empty summary with canon and draft", () => {
 
   assert.equal(
     updated,
-    "單位: Mega Bank\nExisting heading\nBody text",
+    "單位：Mega Bank\nExisting heading\nBody text",
   );
 });
 
 test("applyCanonToSummary avoids duplicating existing canon", () => {
-  const existing = "單位: Mega Bank\nExisting text";
+  const existing = "單位：Mega Bank\nExisting text";
   const updated = applyCanonToSummary({
     canon: sampleCanon,
     currentSummary: existing,
@@ -61,20 +61,20 @@ test("applyCanonToSummary prepends canon when missing", () => {
 
   assert.equal(
     updated,
-    "單位: Mega Bank\nOther summary line\nSecond line",
+    "單位：Mega Bank\nOther summary line\nSecond line",
   );
 });
 
 test("applyCanonToSummary replaces older registry lines", () => {
   const updated = applyCanonToSummary({
     canon: { master: "New Canon" },
-    currentSummary: "單位: Old Canon\nExisting text",
-    draftSummary: "單位: Older Canon\nDraft body",
+    currentSummary: "單位：Old Canon\nExisting text",
+    draftSummary: "單位：Older Canon\nDraft body",
   });
 
   assert.equal(
     updated,
-    "單位: New Canon\nExisting text",
+    "單位：New Canon\nExisting text",
   );
 });
 
@@ -87,6 +87,19 @@ test("applyCanonToSummary keeps existing spacing intact", () => {
 
   assert.equal(
     updated,
-    "單位: Mega Bank\nLead line\n\nDetails below",
+    "單位：Mega Bank\nLead line\n\nDetails below",
+  );
+});
+
+test("applyCanonToSummary replaces issuer lines that use ascii colon", () => {
+  const updated = applyCanonToSummary({
+    canon: { master: "Next Canon" },
+    currentSummary: "單位: Old Canon\nExisting text",
+    draftSummary: "",
+  });
+
+  assert.equal(
+    updated,
+    "單位：Next Canon\nExisting text",
   );
 });

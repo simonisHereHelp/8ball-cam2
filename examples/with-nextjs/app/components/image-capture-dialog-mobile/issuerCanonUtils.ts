@@ -36,11 +36,11 @@ export const applyCanonToSummary = ({
   currentSummary: string;
   draftSummary: string;
 }): string => {
-  const canonLine = `單位: ${canon.master}`;
+  const canonLine = `單位：${canon.master}`;
   const stripCanonLines = (text: string) =>
     text
       .split(/\r?\n/)
-      .filter((line) => !/^\s*單位\s*:/u.test(line.trim()))
+      .filter((line) => !/^\s*(?:單位|单位|issuer)\s*[:：]/iu.test(line.trim()))
       .map((line) => line.replace(/\s+$/u, ""));
 
   // Prefer the current editable text; fall back to the original draft when empty.

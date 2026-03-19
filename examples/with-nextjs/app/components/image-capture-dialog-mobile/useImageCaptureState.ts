@@ -222,41 +222,53 @@ export const useImageCaptureState = (
   }, []);
 
   const selectCanon = useCallback((canon: IssuerCanonEntry) => {
+    const nextSummary = applyCanonToSummary({
+      canon,
+      currentSummary: editableSummary,
+      draftSummary,
+    });
+
     setSelectedCanon(canon);
     setIsCanonAutoSelected(false);
-    setEditableSummary((current) =>
-      applyCanonToSummary({
-        canon,
-        currentSummary: current,
-        draftSummary,
-      }),
-    );
-  }, [draftSummary]);
+    setEditableSummary(nextSummary);
+
+    const inferredSubfolder = findBestSubfolderMatch(nextSummary, availableSubfolders);
+    setSelectedSubfolder(inferredSubfolder);
+    setIsSubfolderAutoSelected(true);
+  }, [availableSubfolders, draftSummary, editableSummary]);
 
   useEffect(() => {
-    if (!editableSummary.trim() || !issuerCanons.length) return;
+    if (!editableSummary.trim() || !issuerCanons.length) {
+      if (isCanonAutoSelected) {
+        setSelectedCanon(null);
+      }
+      return;
+    }
 
     const inferredCanon = findBestIssuerCanon(editableSummary, issuerCanons);
-    if (!inferredCanon) return;
-
     if (!selectedCanon || isCanonAutoSelected) {
-      setSelectedCanon((current) =>
-        current?.master === inferredCanon.master ? current : inferredCanon,
-      );
+      setSelectedCanon((current) => {
+        if (!inferredCanon) return null;
+        return current?.master === inferredCanon.master ? current : inferredCanon;
+      });
       setIsCanonAutoSelected(true);
     }
   }, [editableSummary, issuerCanons, selectedCanon, isCanonAutoSelected]);
 
   useEffect(() => {
-    if (!editableSummary.trim() || !availableSubfolders.length) return;
+    if (!editableSummary.trim() || !availableSubfolders.length) {
+      if (isSubfolderAutoSelected) {
+        setSelectedSubfolder(null);
+      }
+      return;
+    }
 
     const inferredSubfolder = findBestSubfolderMatch(editableSummary, availableSubfolders);
-    if (!inferredSubfolder) return;
-
     if (!selectedSubfolder || isSubfolderAutoSelected) {
-      setSelectedSubfolder((current) =>
-        current?.topic === inferredSubfolder.topic ? current : inferredSubfolder,
-      );
+      setSelectedSubfolder((current) => {
+        if (!inferredSubfolder) return null;
+        return current?.topic === inferredSubfolder.topic ? current : inferredSubfolder;
+      });
       setIsSubfolderAutoSelected(true);
     }
   }, [
