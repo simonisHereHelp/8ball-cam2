@@ -43,6 +43,16 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
             />
           </div>
 
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-blue-300">TRAINING SUMMARY</label>
+            <textarea
+              value={state.trainingSummary}
+              onChange={(e) => actions.setTrainingSummary(e.target.value)}
+              placeholder="Describe what the model got wrong and what it should learn next time..."
+              className="w-full min-h-[110px] bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
           {/* Canon Selection */}
           <div className="p-3 bg-white/5 rounded-lg border border-white/10">
             <div className="flex justify-between items-center mb-2">

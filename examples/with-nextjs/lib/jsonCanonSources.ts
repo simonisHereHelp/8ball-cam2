@@ -53,3 +53,6 @@ export const CANONICALS_BIBLE_SOURCE = resolveJsonSource(
   process.env.DRIVE_FILE_ID_CANONICALS,
   "canonicals_bible.json"
 );
+
+export const DRIVE_DOCS_TRAINING_FOLDER_ID =
+  process.env.DRIVE_FOLDER_ID_DOCS_TRAINING || "";

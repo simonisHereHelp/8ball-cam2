@@ -1,10 +1,16 @@
 import { Buffer } from "buffer";
 import { NextResponse } from "next/server";
 
+import {
+  buildTrainingTags,
+  saveTrainingExample,
+  type TrainingLogRecord,
+} from "@/lib/driveTrainingExamples";
 import { driveSaveFiles } from "@/lib/driveSaveFiles";
 import { GPT_Router } from "@/lib/gptRouter";
 import { resolveDriveFolder } from "@/lib/driveSubfolderResolver";
 import {
+  DRIVE_DOCS_TRAINING_FOLDER_ID,
   DRIVE_FALLBACK_FOLDER_ID,
   PROMPT_SET_NAME_SOURCE,
 } from "@/lib/jsonCanonSources";
@@ -19,6 +25,9 @@ interface SelectedSubfolderMeta {
   topic: string;
   folderId?: string;
 }
+
+const extractSummaryField = (summary: string, label: string) =>
+  summary.match(new RegExp(`^${label}\\s*[:：]\\s*(.+)$`, "imu"))?.[1]?.trim() || "";
 
 const buildFolderPath = (slugOrPath: string, base: string) => {
   if (!slugOrPath) return base;
@@ -43,6 +52,9 @@ const resolveMimeType = (file: File, fallbackExtension: string) => {
   const extension = resolveExtension(file.name, fallbackExtension);
   return mimeTypeByExtension[extension] ?? "application/octet-stream";
 };
+
+const summariesDiffer = (left: string, right: string) =>
+  left.replace(/\s+/g, " ").trim() !== right.replace(/\s+/g, " ").trim();
 
 function buildMarkdown(params: {
   setName: string;
@@ -120,6 +132,8 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const summary = (formData.get("summary") as string | null)?.trim() ?? "";
+    const draftSummary = (formData.get("draftSummary") as string | null)?.trim() ?? "";
+    const trainingSummary = (formData.get("trainingSummary") as string | null)?.trim() ?? "";
     const selectedCanonRaw = formData.get("selectedCanon");
     const selectedSubfolderRaw = formData.get("selectedSubfolder");
 
@@ -204,6 +218,49 @@ export async function POST(request: Request) {
         };
       },
     });
+
+    const shouldSaveTrainingLog =
+      Boolean(DRIVE_DOCS_TRAINING_FOLDER_ID) &&
+      (Boolean(trainingSummary) || summariesDiffer(draftSummary, summary));
+
+    if (shouldSaveTrainingLog) {
+      try {
+        const trainingImages = imageFiles.map((file, idx) => {
+          const extension = resolveExtension(file.name, "jpeg");
+          const fileName = normalizeFilename(`${normalizedSetName}-p${idx + 1}.${extension}`);
+          return new File([file], fileName, { type: resolveMimeType(file, extension) });
+        });
+
+        const issuer = extractSummaryField(summary, "單位");
+        const docType = extractSummaryField(summary, "類型");
+        const action = extractSummaryField(summary, "行動");
+        const trainingLog: TrainingLogRecord = {
+          originalSummary: draftSummary,
+          finalSummary: summary,
+          correctionNote: trainingSummary,
+          tags: buildTrainingTags(
+            topic,
+            docType,
+            action,
+            selectedCanon?.master,
+            selectedSubfolder?.topic,
+          ),
+          images: trainingImages.map((file) => `./${file.name}`),
+          issuer,
+          docType,
+          action,
+          createdAt: new Date().toISOString(),
+        };
+
+        await saveTrainingExample({
+          setName: normalizedSetName,
+          log: trainingLog,
+          imageFiles: trainingImages,
+        });
+      } catch (trainingError) {
+        console.warn("Unable to persist training log:", trainingError);
+      }
+    }
 
     return NextResponse.json({ setName: normalizedSetName, targetFolderId, topic }, { status: 200 });
   } catch (err: any) {

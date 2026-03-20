@@ -25,6 +25,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - All former OpenAI chat-completion calls in the example app now route through `examples/with-nextjs/lib/gptRouter.ts`.
 - Google Drive reads/writes and NextAuth behavior are unchanged.
 - The summarize route still sends images using the OpenAI-compatible message shape expected by `llama.cpp`. For best results, the endpoint must support the image inputs your selected model can handle.
+- If `DRIVE_FOLDER_ID_DOCS_TRAINING` is set, corrected summaries are also saved to that Drive folder as `*-cLog.json` plus the related page images. The summarize route then retrieves the latest two training logs as multimodal few-shot examples.
 
 ## Image input with llama.cpp
 

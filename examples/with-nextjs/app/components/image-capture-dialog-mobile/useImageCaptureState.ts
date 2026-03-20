@@ -44,6 +44,7 @@ export const useImageCaptureState = (
   // --- Summary & AI State ---
   const [draftSummary, setDraftSummary] = useState(""); // Original AI output
   const [editableSummary, setEditableSummary] = useState(""); // User's working text
+  const [trainingSummary, setTrainingSummary] = useState("");
   const [summaryImageUrl, setSummaryImageUrl] = useState<string | null>(null);
   const [showSummaryOverlay, setShowSummaryOverlay] = useState(false);
 
@@ -88,6 +89,7 @@ export const useImageCaptureState = (
     setImages([]);
     setDraftSummary("");
     setEditableSummary("");
+    setTrainingSummary("");
     setSummaryImageUrl(null);
     setError("");
     setSaveMessage("");
@@ -120,6 +122,7 @@ export const useImageCaptureState = (
         setSummaryImageUrl(null);
         setDraftSummary("");
         setEditableSummary("");
+        setTrainingSummary("");
         setSaveMessage("");
         setShowGallery(false);
         setSelectedCanon(null);
@@ -165,6 +168,7 @@ export const useImageCaptureState = (
     const setSummaries = (newSummary: string) => {
       setDraftSummary(newSummary);
       setEditableSummary(newSummary); 
+      setTrainingSummary("");
     };
     
     const didSummarize = await handleSummary({
@@ -307,6 +311,7 @@ export const useImageCaptureState = (
       images,
       draftSummary,
       finalSummary,
+      trainingSummary,
       selectedCanon,
       selectedSubfolder,
       setIsSaving,
@@ -326,6 +331,7 @@ export const useImageCaptureState = (
         setImages([]);
         setDraftSummary("");
         setEditableSummary("");
+        setTrainingSummary("");
         setSelectedCanon(null);
         setSelectedSubfolder(null);
         playSuccessChime();
@@ -339,6 +345,7 @@ export const useImageCaptureState = (
     images,
     draftSummary,
     editableSummary,
+    trainingSummary,
     selectedCanon,
     selectedSubfolder,
     onOpenChange,
@@ -357,6 +364,7 @@ export const useImageCaptureState = (
     captureSource,
     draftSummary,
     editableSummary,
+    trainingSummary,
     summaryImageUrl,
     error,
     saveMessage,
@@ -381,6 +389,7 @@ export const useImageCaptureState = (
     handleClose,
     setCaptureSource,
     setEditableSummary,
+    setTrainingSummary,
     setDraftSummary,
     setShowGallery,
     setCameraError,

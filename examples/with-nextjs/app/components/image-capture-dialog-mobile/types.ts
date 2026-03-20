@@ -25,6 +25,7 @@ export interface State {
   captureSource: "camera" | "photos";
   draftSummary: string;     // The original AI output
   editableSummary: string;  // What the user sees and edits
+  trainingSummary: string;
   summaryImageUrl: string | null;
   showSummaryOverlay: boolean;
   error: string;
@@ -49,6 +50,7 @@ export interface Actions {
   handleClose: () => void;
   setCaptureSource: (source: "camera" | "photos") => void;
   setEditableSummary: (summary: string) => void;
+  setTrainingSummary: (summary: string) => void;
   setDraftSummary: (summary: string) => void;
   setShowGallery: (show: boolean) => void;
   setCameraError: (error: boolean) => void;
