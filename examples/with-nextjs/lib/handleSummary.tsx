@@ -53,14 +53,13 @@ ${assets}
 export const handleSummary = async ({
   images,
   setIsSaving,
-  setSummary, // NOTE: This function now sets BOTH draftSummary and editableSummary in the calling hook.
+  setSummary,
   setSummaryImageUrl,
   setShowSummaryOverlay,
   setError,
 }: {
   images: Image[];
   setIsSaving: (isSaving: boolean) => void;
-  // UPDATED: setSummary is now a function that takes the final summary string
   setSummary: (summary: string) => void;
   setSummaryImageUrl: (url: string | null) => void;
   setShowSummaryOverlay: (show: boolean) => void;
@@ -75,18 +74,10 @@ export const handleSummary = async ({
   try {
     const formData = new FormData();
 
-    // ✅ append ALL images
     images.forEach((image) => {
       formData.append("image", image.file);
     });
 
-    // ✅ optionally include URLs if your server supports imageUrl
-    images.forEach((image) => {
-      if (image.url) {
-        formData.append("imageUrl", image.url);
-      }
-    });
-    
     const response = await fetch("/api/summarize", {
       method: "POST",
       body: formData,
@@ -110,12 +101,9 @@ export const handleSummary = async ({
     }
 
     const data = (await response.json()) as { summary?: string };
-
-    // First 800 characters only
     const summaryText = (data.summary || "").slice(0, 800);
     const resolvedSummary = summaryText.trim().length ? summaryText : fallbackSummary;
 
-    // Call the custom setter, which will update both draftSummary and editableSummary
     setSummary(resolvedSummary);
     setSummaryImageUrl(images[images.length - 1].url);
     setShowSummaryOverlay(true);

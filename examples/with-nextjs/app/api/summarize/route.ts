@@ -11,6 +11,22 @@ import {
 const isImageUnsupportedError = (message: string) =>
   /image input is not supported|provide the mmproj/i.test(message);
 
+const buildMultiImageContent = (userPrompt: string, imageUrls: string[]) => [
+  {
+    type: "text" as const,
+    text: [
+      `以下提供同一份文件的 ${imageUrls.length} 張影像，依序代表第 1 頁到第 ${imageUrls.length} 頁。`,
+      "請把它們視為同一份多頁文件，先完整閱讀全部頁面，再輸出一份最終摘要。",
+      "不要只根據第一頁作答；若後續頁面補充日期、金額、明細、總額、帳號、頁尾資訊或其他關鍵內容，請一併納入。",
+      userPrompt,
+    ].join("\n\n"),
+  },
+  ...imageUrls.map((url) => ({
+    type: "image_url" as const,
+    image_url: { url },
+  })),
+];
+
 export async function POST(req: Request) {
   const promptId = PROMPT_SUMMARY_SOURCE;
   const canonicalFileId = CANONICALS_BIBLE_SOURCE;
@@ -32,25 +48,14 @@ export async function POST(req: Request) {
       }),
     );
 
-    const content = [
-      {
-        type: "text" as const,
-        text: userPrompt,
-      },
-      {
-        type: "text" as const,
-        text: "以下是目前待摘要的文件影像。請依據目前影像可見內容輸出最終摘要。",
-      },
-      ...imageUrls.map((url) => ({
-        type: "image_url" as const,
-        image_url: { url },
-      })),
-    ];
+    if (!imageUrls.length) {
+      return NextResponse.json({ error: "No images were provided." }, { status: 400 });
+    }
 
     const summary = await GPT_Router.getChatCompletionText({
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content },
+        { role: "user", content: buildMultiImageContent(userPrompt, imageUrls) },
       ],
       temperature: 0,
       max_tokens: 220,
