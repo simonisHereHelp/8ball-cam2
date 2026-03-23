@@ -1,6 +1,5 @@
-import type React from "react"; // Required for React.RefObject
+import type React from "react";
 import type { FacingMode, WebCameraHandler } from "@shivantra/react-web-camera";
-import type { IssuerCanonEntry } from "./issuerCanonUtils";
 
 export interface Image {
   url: string;
@@ -15,6 +14,13 @@ export interface SubfolderOption {
   description?: string;
 }
 
+export interface HistoryContextMatch {
+  matchId: number;
+  fileName: string;
+  date: string;
+  confidence: number;
+}
+
 export interface State {
   images: Image[];
   facingMode: FacingMode;
@@ -23,8 +29,8 @@ export interface State {
   showGallery: boolean;
   cameraError: boolean;
   captureSource: "camera" | "photos";
-  draftSummary: string;     // The original AI output
-  editableSummary: string;  // What the user sees and edits
+  draftSummary: string;
+  editableSummary: string;
   trainingSummary: string;
   summaryImageUrl: string | null;
   showSummaryOverlay: boolean;
@@ -34,10 +40,10 @@ export interface State {
   selectedSubfolder: SubfolderOption | null;
   subfolderLoading: boolean;
   subfolderError: string;
-  issuerCanons: IssuerCanonEntry[];
-  issuerCanonsLoading: boolean;
-  canonError: string;
-  selectedCanon: IssuerCanonEntry | null;
+  matchedIssuerName: string;
+  matchedIssuerSource: string;
+  historyContextMatches: HistoryContextMatch[];
+  historyMatchLoading: boolean;
 }
 
 export interface Actions {
@@ -55,11 +61,8 @@ export interface Actions {
   setShowGallery: (show: boolean) => void;
   setCameraError: (error: boolean) => void;
   setError: (message: string) => void;
-  setCanonError: (message: string) => void;
   refreshSubfolders: () => Promise<void>;
   selectSubfolder: (subfolder: SubfolderOption) => void;
-  refreshCanons: () => Promise<void>;
-  selectCanon: (canon: IssuerCanonEntry) => void;
 }
 
 export interface CameraViewProps {

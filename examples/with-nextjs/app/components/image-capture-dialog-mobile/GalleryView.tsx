@@ -1,4 +1,4 @@
-import { Loader2, Save, X, RefreshCw } from "lucide-react";
+import { Loader2, Save, X, RefreshCw, History } from "lucide-react";
 import { Button } from "@/ui/components";
 import type { State, Actions } from "./types";
 
@@ -16,7 +16,6 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Responsive Image Grid */}
         <div className="grid grid-cols-2 gap-2">
           {state.images.map((img, i) => (
             <div key={i} className="relative aspect-square bg-white/5 rounded-lg overflow-hidden">
@@ -31,8 +30,35 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
           ))}
         </div>
 
-        {/* Summary Editor Section */}
         <div className="space-y-4">
+          <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-300">
+              <History size={14} />
+              HISTORY MATCHES
+              {state.historyMatchLoading && <Loader2 size={14} className="animate-spin" />}
+            </div>
+            {state.matchedIssuerName ? (
+              <p className="text-xs text-white/80">
+                Issuer match: <span className="text-white font-semibold">{state.matchedIssuerName}</span>
+                {state.matchedIssuerSource ? ` from ${state.matchedIssuerSource}` : ""}
+              </p>
+            ) : (
+              <p className="text-xs text-white/50">No issuer history match applied.</p>
+            )}
+            {state.historyContextMatches.length > 0 ? (
+              <div className="space-y-1">
+                {state.historyContextMatches.map((match) => (
+                  <p key={`${match.matchId}-${match.fileName}`} className="text-xs text-white/70">
+                    {match.fileName}
+                    {match.date ? ` (${match.date})` : ""}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-white/50">No related history references found.</p>
+            )}
+          </div>
+
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-blue-300">EDIT SUMMARY</label>
             <textarea
@@ -53,38 +79,6 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
             />
           </div>
 
-          {/* Canon Selection */}
-          <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-blue-300">ISSUER CANONS</span>
-              <button
-                onClick={actions.refreshCanons}
-                className="app-button h-6 w-6 rounded-full flex items-center justify-center"
-              >
-                <RefreshCw
-                  size={14}
-                  className={state.issuerCanonsLoading ? "animate-spin" : ""}
-                />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {state.issuerCanons.map((canon) => (
-                <button
-                  key={canon.master}
-                  onClick={() => actions.selectCanon(canon)}
-                  className={`text-[10px] px-3 py-1 rounded-full border transition ${
-                    state.selectedCanon?.master === canon.master
-                      ? "bg-blue-600 border-blue-400 text-white shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
-                      : "border-white/20 text-white/70"
-                  }`}
-                >
-                  {canon.master}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Target Subfolder Selection */}
           <div className="p-3 bg-white/5 rounded-lg border border-white/10">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-blue-300">TARGET SUBFOLDER</span>
@@ -123,12 +117,7 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
 
       <div className="p-4 border-t border-white/10">
         <Button onClick={actions.handleSaveImages} disabled={state.isSaving || !state.editableSummary.trim()} className="app-button w-full h-12">
-          {state.isSaving ? (
-            <Loader2 className="animate-spin mr-2" />
-          ) : (
-            <Save className="mr-2" />
-          )}{" "}
-          <span className="app-button-label">Save to Drive</span>
+          {state.isSaving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} <span className="app-button-label">Save to Drive</span>
         </Button>
       </div>
     </div>

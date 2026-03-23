@@ -16,11 +16,6 @@ import {
 } from "@/lib/jsonCanonSources";
 import { normalizeFilename } from "@/lib/normalizeFilename";
 
-interface SelectedCanonMeta {
-  master: string;
-  aliases?: string[];
-}
-
 interface SelectedSubfolderMeta {
   topic: string;
   folderId?: string;
@@ -56,11 +51,7 @@ const resolveMimeType = (file: File, fallbackExtension: string) => {
 const summariesDiffer = (left: string, right: string) =>
   left.replace(/\s+/g, " ").trim() !== right.replace(/\s+/g, " ").trim();
 
-function buildMarkdown(params: {
-  setName: string;
-  summary: string;
-  imageFiles: File[];
-}) {
+function buildMarkdown(params: { setName: string; summary: string; imageFiles: File[] }) {
   const { setName, summary, imageFiles } = params;
   const images = imageFiles.map((file, idx) => {
     const pageNumber = idx + 1;
@@ -134,24 +125,13 @@ export async function POST(request: Request) {
     const summary = (formData.get("summary") as string | null)?.trim() ?? "";
     const draftSummary = (formData.get("draftSummary") as string | null)?.trim() ?? "";
     const trainingSummary = (formData.get("trainingSummary") as string | null)?.trim() ?? "";
-    const selectedCanonRaw = formData.get("selectedCanon");
     const selectedSubfolderRaw = formData.get("selectedSubfolder");
 
-    let selectedCanon: SelectedCanonMeta | null = null;
     let selectedSubfolder: SelectedSubfolderMeta | null = null;
-
-    if (typeof selectedCanonRaw === "string") {
-      try {
-        selectedCanon = (JSON.parse(selectedCanonRaw) as SelectedCanonMeta) ?? null;
-      } catch (err) {
-        console.warn("Unable to parse selectedCanon from request:", err);
-      }
-    }
 
     if (typeof selectedSubfolderRaw === "string") {
       try {
-        selectedSubfolder =
-          (JSON.parse(selectedSubfolderRaw) as SelectedSubfolderMeta) ?? null;
+        selectedSubfolder = (JSON.parse(selectedSubfolderRaw) as SelectedSubfolderMeta) ?? null;
       } catch (err) {
         console.warn("Unable to parse selectedSubfolder from request:", err);
       }
@@ -200,9 +180,7 @@ export async function POST(request: Request) {
       folderId: targetFolderId,
       files: uploadFiles,
       fileToUpload: async (file) => {
-        const baseName = normalizeFilename(
-          normalizedSetName.replace(/[\\/:*?"<>|]/g, "_"),
-        );
+        const baseName = normalizeFilename(normalizedSetName.replace(/[\\/:*?"<>|]/g, "_"));
         const extension = resolveExtension(file.name, "dat");
 
         const fileName = normalizeFilename(
@@ -238,13 +216,7 @@ export async function POST(request: Request) {
           originalSummary: draftSummary,
           finalSummary: summary,
           correctionNote: trainingSummary,
-          tags: buildTrainingTags(
-            topic,
-            docType,
-            action,
-            selectedCanon?.master,
-            selectedSubfolder?.topic,
-          ),
+          tags: buildTrainingTags(topic, docType, action, selectedSubfolder?.topic),
           images: trainingImages.map((file) => `./${file.name}`),
           issuer,
           docType,

@@ -4,22 +4,17 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import type { WebCameraHandler, FacingMode } from "@shivantra/react-web-camera";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+
 import { handleSave } from "@/lib/handleSave";
 import { handleSummary } from "@/lib/handleSummary";
 import { normalizeFilename } from "@/lib/normalizeFilename";
-import { findBestIssuerCanon } from "@/lib/issuerCanonMatcher";
 import { findBestSubfolderMatch } from "@/lib/subfolderMatcher";
 import {
   CaptureError,
   DEFAULTS,
   normalizeCapture,
 } from "../shared/normalizeCapture";
-import type { Image, State, Actions, SubfolderOption } from "./types";
-import {
-  applyCanonToSummary,
-  fetchIssuerCanonList,
-  type IssuerCanonEntry,
-} from "./issuerCanonUtils";
+import type { HistoryContextMatch, Image, State, Actions, SubfolderOption } from "./types";
 import { playSuccessChime } from "./soundEffects";
 
 interface UseImageCaptureState {
@@ -28,11 +23,62 @@ interface UseImageCaptureState {
   cameraRef: React.RefObject<WebCameraHandler | null>;
 }
 
+interface MatchIssuerResponse {
+  matched?: boolean;
+  issuerName?: string;
+  confidence?: number;
+  sourceFile?: string;
+}
+
+interface MatchContextResponse {
+  matches?: HistoryContextMatch[];
+}
+
+const replaceIssuerLine = (summary: string, issuerName: string) => {
+  if (!issuerName.trim()) return summary;
+  const lines = summary.split(/\r?\n/);
+  const nextLine = `單位：${issuerName.trim()}`;
+  const issuerIndex = lines.findIndex((line) => /^\s*(?:單位|单位|issuer)\s*[:：]/iu.test(line.trim()));
+  if (issuerIndex >= 0) {
+    lines[issuerIndex] = nextLine;
+    return lines.join("\n");
+  }
+  return [nextLine, ...lines].join("\n");
+};
+
+const fetchIssuerMatch = async (editableSummary: string) => {
+  const response = await fetch("/api/match-issuer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ editableSummary }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to match issuer from history.");
+  }
+
+  return (await response.json()) as MatchIssuerResponse;
+};
+
+const fetchContextMatches = async (editableSummary: string) => {
+  const response = await fetch("/api/match-context", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ editableSummary }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to match related history.");
+  }
+
+  const payload = (await response.json()) as MatchContextResponse;
+  return payload.matches ?? [];
+};
+
 export const useImageCaptureState = (
   onOpenChange?: (open: boolean) => void,
   initialSource: "camera" | "photos" = "camera",
 ): UseImageCaptureState => {
-  // --- Core State ---
   const [images, setImages] = useState<Image[]>([]);
   const [facingMode, setFacingMode] = useState<FacingMode>("environment");
   const [isSaving, setIsSaving] = useState(false);
@@ -40,40 +86,30 @@ export const useImageCaptureState = (
   const [showGallery, setShowGallery] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [captureSource, setCaptureSource] = useState<"camera" | "photos">(initialSource);
-
-  // --- Summary & AI State ---
-  const [draftSummary, setDraftSummary] = useState(""); // Original AI output
-  const [editableSummary, setEditableSummary] = useState(""); // User's working text
+  const [draftSummary, setDraftSummary] = useState("");
+  const [editableSummary, setEditableSummary] = useState("");
   const [trainingSummary, setTrainingSummary] = useState("");
   const [summaryImageUrl, setSummaryImageUrl] = useState<string | null>(null);
   const [showSummaryOverlay, setShowSummaryOverlay] = useState(false);
-
-  // --- UI Feedback State ---
   const [error, setError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [availableSubfolders, setAvailableSubfolders] = useState<SubfolderOption[]>([]);
   const [selectedSubfolder, setSelectedSubfolder] = useState<SubfolderOption | null>(null);
   const [subfolderLoading, setSubfolderLoading] = useState(false);
   const [subfolderError, setSubfolderError] = useState("");
-
-  // --- Canon / Metadata State ---
-  const [issuerCanons, setIssuerCanons] = useState<IssuerCanonEntry[]>([]);
-  const [issuerCanonsLoading, setIssuerCanonsLoading] = useState(false);
-  const [canonError, setCanonError] = useState("");
-  const [selectedCanon, setSelectedCanon] = useState<IssuerCanonEntry | null>(null);
-  const [isCanonAutoSelected, setIsCanonAutoSelected] = useState(true);
+  const [matchedIssuerName, setMatchedIssuerName] = useState("");
+  const [matchedIssuerSource, setMatchedIssuerSource] = useState("");
+  const [historyContextMatches, setHistoryContextMatches] = useState<HistoryContextMatch[]>([]);
+  const [historyMatchLoading, setHistoryMatchLoading] = useState(false);
   const [isSubfolderAutoSelected, setIsSubfolderAutoSelected] = useState(true);
 
   const cameraRef = useRef<WebCameraHandler | null>(null);
   const { data: session } = useSession();
   const router = useRouter();
 
-  // Keep capture source in sync with props
   useEffect(() => {
     setCaptureSource(initialSource);
   }, [initialSource]);
-
-  // --- Handlers ---
 
   const deleteImage = useCallback((index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
@@ -85,7 +121,7 @@ export const useImageCaptureState = (
         return;
       }
     }
-    // Reset all state
+
     setImages([]);
     setDraftSummary("");
     setEditableSummary("");
@@ -98,11 +134,9 @@ export const useImageCaptureState = (
     setAvailableSubfolders([]);
     setSelectedSubfolder(null);
     setSubfolderError("");
-    setIssuerCanons([]);
-    setCanonError("");
-    setSelectedCanon(null);
-    setIsCanonAutoSelected(true);
-    setIsSubfolderAutoSelected(true);
+    setMatchedIssuerName("");
+    setMatchedIssuerSource("");
+    setHistoryContextMatches([]);
     setCaptureSource(initialSource);
     setIsProcessingCapture(false);
     onOpenChange?.(false);
@@ -118,17 +152,17 @@ export const useImageCaptureState = (
           preferredName,
         });
 
-        // Reset summary context for the new set of images
         setSummaryImageUrl(null);
         setDraftSummary("");
         setEditableSummary("");
         setTrainingSummary("");
         setSaveMessage("");
         setShowGallery(false);
-        setSelectedCanon(null);
         setSelectedSubfolder(null);
-        setIsCanonAutoSelected(true);
         setIsSubfolderAutoSelected(true);
+        setMatchedIssuerName("");
+        setMatchedIssuerSource("");
+        setHistoryContextMatches([]);
         setImages((prev) => [...prev, { url: previewUrl, file: normalizedFile }]);
       } catch (err) {
         setError(err instanceof CaptureError ? err.message : "Unable to process the image.");
@@ -144,7 +178,7 @@ export const useImageCaptureState = (
     try {
       const file = await cameraRef.current.capture();
       if (file) await ingestFile(file, "camera", `capture-${Date.now()}.jpeg`);
-    } catch (err) {
+    } catch {
       setError("Unable to access camera capture.");
     }
   }, [ingestFile]);
@@ -161,45 +195,6 @@ export const useImageCaptureState = (
     setFacingMode(newMode);
   }, [facingMode]);
 
-  const handleSummarize = useCallback(async () => {
-    setSaveMessage("");
-    setError("");
-    
-    const setSummaries = (newSummary: string) => {
-      setDraftSummary(newSummary);
-      setEditableSummary(newSummary); 
-      setTrainingSummary("");
-    };
-    
-    const didSummarize = await handleSummary({
-      images,
-      setIsSaving,
-      setSummary: setSummaries,
-      setSummaryImageUrl,
-      setShowSummaryOverlay,
-      setError,
-    });
-
-    if (didSummarize && images.length > 0) {
-      setShowGallery(true);
-      playSuccessChime();
-    }
-  }, [images]);
-
-  const refreshCanons = useCallback(async () => {
-    if (issuerCanonsLoading) return;
-    setIssuerCanonsLoading(true);
-    setCanonError("");
-    try {
-      const entries = await fetchIssuerCanonList();
-      setIssuerCanons(entries);
-    } catch (err) {
-      setCanonError(err instanceof Error ? err.message : "Unable to load canon list.");
-    } finally {
-      setIssuerCanonsLoading(false);
-    }
-  }, [issuerCanonsLoading]);
-
   const refreshSubfolders = useCallback(async () => {
     if (subfolderLoading) return;
     setSubfolderLoading(true);
@@ -209,9 +204,7 @@ export const useImageCaptureState = (
       if (!response.ok) {
         throw new Error("Unable to load subfolder options.");
       }
-      const json = (await response.json().catch(() => null)) as
-        | { subfolders?: SubfolderOption[] }
-        | null;
+      const json = (await response.json().catch(() => null)) as { subfolders?: SubfolderOption[] } | null;
       setAvailableSubfolders(json?.subfolders ?? []);
     } catch (err) {
       setSubfolderError(err instanceof Error ? err.message : "Unable to load subfolder options.");
@@ -225,39 +218,51 @@ export const useImageCaptureState = (
     setIsSubfolderAutoSelected(false);
   }, []);
 
-  const selectCanon = useCallback((canon: IssuerCanonEntry) => {
-    const nextSummary = applyCanonToSummary({
-      canon,
-      currentSummary: editableSummary,
-      draftSummary,
+  const handleSummarize = useCallback(async () => {
+    setSaveMessage("");
+    setError("");
+    setHistoryContextMatches([]);
+    setMatchedIssuerName("");
+    setMatchedIssuerSource("");
+
+    const resolvedSummary = await handleSummary({
+      images,
+      setIsSaving,
+      setSummaryImageUrl,
+      setShowSummaryOverlay,
+      setError,
     });
 
-    setSelectedCanon(canon);
-    setIsCanonAutoSelected(false);
+    if (!resolvedSummary) return;
+
+    setDraftSummary(resolvedSummary);
+    setTrainingSummary("");
+
+    let nextSummary = resolvedSummary;
+    setHistoryMatchLoading(true);
+
+    try {
+      const issuerMatch = await fetchIssuerMatch(nextSummary);
+      if (issuerMatch.matched && issuerMatch.issuerName) {
+        nextSummary = replaceIssuerLine(nextSummary, issuerMatch.issuerName);
+        setMatchedIssuerName(issuerMatch.issuerName);
+        setMatchedIssuerSource(issuerMatch.sourceFile?.trim() || "");
+      }
+
+      const contextMatches = await fetchContextMatches(nextSummary);
+      setHistoryContextMatches(contextMatches);
+    } catch (matchError) {
+      console.warn("History matching failed:", matchError);
+    } finally {
+      setHistoryMatchLoading(false);
+    }
+
     setEditableSummary(nextSummary);
 
-    const inferredSubfolder = findBestSubfolderMatch(nextSummary, availableSubfolders);
-    setSelectedSubfolder(inferredSubfolder);
-    setIsSubfolderAutoSelected(true);
-  }, [availableSubfolders, draftSummary, editableSummary]);
-
-  useEffect(() => {
-    if (!editableSummary.trim() || !issuerCanons.length) {
-      if (isCanonAutoSelected) {
-        setSelectedCanon(null);
-      }
-      return;
+    if (images.length > 0) {
+      setShowGallery(true);
     }
-
-    const inferredCanon = findBestIssuerCanon(editableSummary, issuerCanons);
-    if (!selectedCanon || isCanonAutoSelected) {
-      setSelectedCanon((current) => {
-        if (!inferredCanon) return null;
-        return current?.master === inferredCanon.master ? current : inferredCanon;
-      });
-      setIsCanonAutoSelected(true);
-    }
-  }, [editableSummary, issuerCanons, selectedCanon, isCanonAutoSelected]);
+  }, [images]);
 
   useEffect(() => {
     if (!editableSummary.trim() || !availableSubfolders.length) {
@@ -275,19 +280,7 @@ export const useImageCaptureState = (
       });
       setIsSubfolderAutoSelected(true);
     }
-  }, [
-    editableSummary,
-    availableSubfolders,
-    selectedSubfolder,
-    isSubfolderAutoSelected,
-  ]);
-
-  // Auto-refresh canons when gallery opens
-  useEffect(() => {
-    if (showGallery && !issuerCanons.length && !issuerCanonsLoading) {
-      refreshCanons();
-    }
-  }, [showGallery, issuerCanons.length, issuerCanonsLoading, refreshCanons]);
+  }, [editableSummary, availableSubfolders, selectedSubfolder, isSubfolderAutoSelected]);
 
   useEffect(() => {
     if (showGallery && !availableSubfolders.length && !subfolderLoading) {
@@ -297,7 +290,7 @@ export const useImageCaptureState = (
 
   const handleSaveImages = useCallback(async () => {
     if (!session || isSaving) return;
-    
+
     const finalSummary = editableSummary.trim();
     if (!finalSummary) {
       setError("Please ensure the summary is not empty before saving.");
@@ -312,7 +305,6 @@ export const useImageCaptureState = (
       draftSummary,
       finalSummary,
       trainingSummary,
-      selectedCanon,
       selectedSubfolder,
       setIsSaving,
       onError: setError,
@@ -321,7 +313,7 @@ export const useImageCaptureState = (
         const folderPath = topic || targetFolderId?.split("/").pop() || "Drive";
         const displayPath = folderPath.replace(/^Drive_/, "");
         const resolvedName = normalizeFilename(setName || "(untitled)");
-        
+
         sessionStorage.setItem(
           "uploadConfirmation",
           JSON.stringify({ folder: displayPath, filename: resolvedName }),
@@ -332,8 +324,10 @@ export const useImageCaptureState = (
         setDraftSummary("");
         setEditableSummary("");
         setTrainingSummary("");
-        setSelectedCanon(null);
         setSelectedSubfolder(null);
+        setMatchedIssuerName("");
+        setMatchedIssuerSource("");
+        setHistoryContextMatches([]);
         playSuccessChime();
         onOpenChange?.(false);
         router.push("/");
@@ -346,13 +340,10 @@ export const useImageCaptureState = (
     draftSummary,
     editableSummary,
     trainingSummary,
-    selectedCanon,
     selectedSubfolder,
     onOpenChange,
     router,
   ]);
-
-  // --- Aggregate State & Actions ---
 
   const state: State = {
     images,
@@ -373,10 +364,10 @@ export const useImageCaptureState = (
     subfolderLoading,
     subfolderError,
     showSummaryOverlay,
-    issuerCanons,
-    issuerCanonsLoading,
-    canonError,
-    selectedCanon,
+    matchedIssuerName,
+    matchedIssuerSource,
+    historyContextMatches,
+    historyMatchLoading,
   };
 
   const actions: Actions = {
@@ -394,11 +385,8 @@ export const useImageCaptureState = (
     setShowGallery,
     setCameraError,
     setError,
-    setCanonError,
     refreshSubfolders,
     selectSubfolder,
-    refreshCanons,
-    selectCanon,
   };
 
   return { state, actions, cameraRef };

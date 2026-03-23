@@ -45,27 +45,20 @@ ${assets}
 `;
 };
 
-/**
- * Uploads the latest image to /api/summarize and shows
- * the first 800 characters of the returned summary.
- */
-
 export const handleSummary = async ({
   images,
   setIsSaving,
-  setSummary,
   setSummaryImageUrl,
   setShowSummaryOverlay,
   setError,
 }: {
   images: Image[];
   setIsSaving: (isSaving: boolean) => void;
-  setSummary: (summary: string) => void;
   setSummaryImageUrl: (url: string | null) => void;
   setShowSummaryOverlay: (show: boolean) => void;
   setError: (message: string) => void;
-}): Promise<boolean> => {
-  if (images.length === 0) return false;
+}): Promise<string | null> => {
+  if (images.length === 0) return null;
 
   const fallbackSummary = buildSummaryTemplate(images);
 
@@ -73,7 +66,6 @@ export const handleSummary = async ({
   setError("");
   try {
     const formData = new FormData();
-
     images.forEach((image) => {
       formData.append("image", image.file);
     });
@@ -104,22 +96,20 @@ export const handleSummary = async ({
     const summaryText = (data.summary || "").slice(0, 800);
     const resolvedSummary = summaryText.trim().length ? summaryText : fallbackSummary;
 
-    setSummary(resolvedSummary);
     setSummaryImageUrl(images[images.length - 1].url);
     setShowSummaryOverlay(true);
     playSuccessChime();
-    return true;
+    return resolvedSummary;
   } catch (error) {
     console.error("Failed to summarize image:", error);
     const resolvedMessage =
       error instanceof Error && error.message.trim().length > 0
         ? error.message
         : "Unable to summarize the captured image. Please edit the template summary.";
-    setSummary(fallbackSummary);
     setSummaryImageUrl(null);
     setError(resolvedMessage);
     setShowSummaryOverlay(false);
-    return true;
+    return fallbackSummary;
   } finally {
     setIsSaving(false);
   }

@@ -7,26 +7,16 @@ export interface Image {
   file: File;
 }
 
-export interface SelectedCanonMeta {
-  master: string;
-  aliases?: string[];
-}
-
 export interface SelectedSubfolderMeta {
   topic: string;
   folderId?: string;
 }
 
-/**
- * Saves the current images + summary via /api/save-set.
- * The server-side LLM router is responsible for deriving setName.
- */
 export const handleSave = async ({
   images,
   draftSummary,
   finalSummary,
   trainingSummary,
-  selectedCanon,
   selectedSubfolder,
   setIsSaving,
   onError,
@@ -36,7 +26,6 @@ export const handleSave = async ({
   draftSummary: string;
   finalSummary: string;
   trainingSummary?: string;
-  selectedCanon?: SelectedCanonMeta | null;
   selectedSubfolder?: SelectedSubfolderMeta | null;
   setIsSaving: (isSaving: boolean) => void;
   onError?: (message: string) => void;
@@ -55,14 +44,10 @@ export const handleSave = async ({
 
   try {
     const formData = new FormData();
-
     formData.append("summary", trimmedFinalSummary);
     formData.append("draftSummary", draftSummary.trim());
     formData.append("trainingSummary", trainingSummary?.trim() ?? "");
 
-    if (selectedCanon) {
-      formData.append("selectedCanon", JSON.stringify(selectedCanon));
-    }
     if (selectedSubfolder) {
       formData.append("selectedSubfolder", JSON.stringify(selectedSubfolder));
     }
@@ -85,28 +70,6 @@ export const handleSave = async ({
       | { setName?: string; targetFolderId?: string | null; topic?: string | null }
       | null;
 
-    try {
-      const updateResponse = await fetch("/api/update-issuerCanon", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          draftSummary: draftSummary.trim(),
-          finalSummary: trimmedFinalSummary,
-        }),
-        credentials: "include",
-      });
-
-      if (!updateResponse.ok) {
-        console.warn(`[update-issuerCanon] Server warning/error: ${updateResponse.status}`);
-      }
-
-      console.log("[update-issuerCanon] Finished attempt.");
-    } catch (e) {
-      console.error("Error calling /api/update-issuerCanon:", e);
-    }
-
     onSuccess?.({
       setName: json?.setName ?? "",
       targetFolderId: json?.targetFolderId ?? null,
@@ -114,7 +77,6 @@ export const handleSave = async ({
     });
 
     playSuccessChime();
-
     return true;
   } catch (error) {
     console.error("Failed to save images:", error);

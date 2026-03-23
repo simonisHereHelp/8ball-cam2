@@ -3,10 +3,7 @@ import { Buffer } from "buffer";
 import { NextResponse } from "next/server";
 
 import { GPT_Router } from "@/lib/gptRouter";
-import {
-  CANONICALS_BIBLE_SOURCE,
-  PROMPT_SUMMARY_SOURCE,
-} from "@/lib/jsonCanonSources";
+import { PROMPT_SUMMARY_SOURCE } from "@/lib/jsonCanonSources";
 
 const isImageUnsupportedError = (message: string) =>
   /image input is not supported|provide the mmproj/i.test(message);
@@ -29,14 +26,11 @@ const buildMultiImageContent = (userPrompt: string, imageUrls: string[]) => [
 
 export async function POST(req: Request) {
   const promptId = PROMPT_SUMMARY_SOURCE;
-  const canonicalFileId = CANONICALS_BIBLE_SOURCE;
 
   try {
-    const bibleData = await GPT_Router._fetchFile(canonicalFileId);
-
     const [systemPrompt, userPrompt] = await Promise.all([
       GPT_Router.getSystemPrompt(promptId),
-      GPT_Router.getUserPrompt(promptId, { bibleData }),
+      GPT_Router.getUserPrompt(promptId, {}),
     ]);
 
     const formData = await req.formData();
