@@ -1,0 +1,75 @@
+{
+  "input_hint": "images + RAG Context + terminology bible",
+  "output": {
+    "file_group_id": "國民年金保險-ApplicationForm-SafeKeep-20260123",
+    "subject_category": "TaiwanPersonal",
+    "doc_class": "ApplicationForm",
+    "doc_date": "2026-01-23",
+    "issuer_name": "國民年金保險",
+    "issuer_alias": "勞保局-國民年金保險",
+    "title": "國民年金保險老年年金給付申請書及給付收據",
+    "summary": "本文件為國民年金保險老年年金給付申請書，內容包含申請人基本資料與給付申請。",
+    "actionable_in_verb": "SafeKeep",
+    "language": "zh-TW",
+    "entities": {
+      "persons": [
+        "陳○堂"
+      ],
+      "orgs": [
+        "勞工保險局",
+        "國民年金保險"
+      ],
+      "accounts": [
+        "Y120137964"
+      ],
+      "addresses": [
+        "台北市萬華區..."
+      ],
+      "phones": [
+        "0970-139-001"
+      ]
+    },
+    "incident_keys": [
+      "國民年金-老年年金申請",
+      "勞保局-給付申請"
+    ],
+    "pages": [
+      {
+        "page_no": 1,
+        "text": "勞工保險局 國民年金保險老年年金給付申請書...",
+        "sections": [
+          {
+            "section_title": "申請人基本資料",
+            "content": "姓名：陳○堂；身分證號：Y120137964"
+          }
+        ]
+      }
+    ],
+    "matched_incidents": [
+      {
+        "ranking": "1",
+        "file_group_id": "國民年金保險-ApplicationForm-SafeKeep-20251203",
+        "doc_date": "2025-12-03",
+        "summary": "先前申請未成功",
+        "incident_keys": [
+          "申請失敗"
+        ]
+      }
+    ],
+    "timeline": [
+      {
+        "time_line_no": "1",
+        "doc_date": "2025-12-03",
+        "file_group_id": "國民年金保險-ApplicationForm-SafeKeep-20251203",
+        "summary": "首次申請失敗"
+      },
+      {
+        "time_line_no": "2",
+        "doc_date": "2026-01-23",
+        "file_group_id": "國民年金保險-ApplicationForm-SafeKeep-20260123",
+        "summary": "再次申請成功"
+      }
+    ],
+    "action_plan": "建議行動方案：SafeKeep。本案件已完成申請，無需後續處理，建議存檔。"
+  }
+}

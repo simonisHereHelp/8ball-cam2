@@ -21,6 +21,24 @@ export const PROMPT_SUMMARY_SOURCE = resolveJsonSource(
   "prompt_summary.json",
 );
 
+export const PROMPT_EXTRACT_SOURCE = resolveJsonSource(
+  process.env.PROMPT_EXTRACT_JSON_PATH,
+  process.env.PROMPT_EXTRACT_JSON_ID,
+  "prompt_extract.json",
+);
+
+export const ONE_SHOT_EXAMPLE_SOURCE = resolveJsonSource(
+  process.env.ONE_SHOT_EXAMPLE_JSON_PATH,
+  process.env.ONE_SHOT_EXAMPLE_JSON_ID,
+  "one_shot_example.json",
+);
+
+export const SUBJECT_CAT_DOC_CLASS_ACTION_VERB_SOURCE = resolveJsonSource(
+  process.env.SUBJECT_CAT_DOC_CLASS_ACTION_VERB_JSON_PATH,
+  process.env.SUBJECT_CAT_DOC_CLASS_ACTION_VERB_JSON_ID,
+  "subjectCat_docClass_actionVerb.json",
+);
+
 export const PROMPT_SET_NAME_SOURCE = resolveJsonSource(
   process.env.PROMPT_SET_NAME_JSON_PATH,
   process.env.PROMPT_SET_NAME_JSON_ID,
