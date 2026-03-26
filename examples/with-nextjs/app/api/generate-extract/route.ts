@@ -291,9 +291,9 @@ const resolveImages = async (request: Request) => {
 
   if (jsonBody) {
     const rawImages: unknown[] = Array.isArray(jsonBody.images) ? jsonBody.images : [];
-    const images = rawImages
-      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-      : [];
+    const images = rawImages.filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
 
     return {
       imageUrls: images,
