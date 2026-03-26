@@ -290,8 +290,9 @@ const resolveImages = async (request: Request) => {
   const jsonBody = await parseJsonBody(request);
 
   if (jsonBody) {
-    const images = Array.isArray(jsonBody.images)
-      ? jsonBody.images.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    const rawImages: unknown[] = Array.isArray(jsonBody.images) ? jsonBody.images : [];
+    const images = rawImages
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
       : [];
 
     return {
