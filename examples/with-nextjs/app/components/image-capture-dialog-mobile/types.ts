@@ -14,13 +14,6 @@ export interface SubfolderOption {
   description?: string;
 }
 
-export interface HistoryContextMatch {
-  matchId: number;
-  fileName: string;
-  date: string;
-  confidence: number;
-}
-
 export interface State {
   images: Image[];
   facingMode: FacingMode;
@@ -40,10 +33,6 @@ export interface State {
   selectedSubfolder: SubfolderOption | null;
   subfolderLoading: boolean;
   subfolderError: string;
-  matchedIssuerName: string;
-  matchedIssuerSource: string;
-  historyContextMatches: HistoryContextMatch[];
-  historyMatchLoading: boolean;
 }
 
 export interface Actions {

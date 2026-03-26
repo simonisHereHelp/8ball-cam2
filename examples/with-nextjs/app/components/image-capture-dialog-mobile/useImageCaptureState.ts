@@ -13,24 +13,13 @@ import {
   DEFAULTS,
   normalizeCapture,
 } from "../shared/normalizeCapture";
-import type { HistoryContextMatch, Image, State, Actions, SubfolderOption } from "./types";
+import type { Image, State, Actions, SubfolderOption } from "./types";
 import { playSuccessChime } from "./soundEffects";
 
 interface UseImageCaptureState {
   state: State;
   actions: Actions;
   cameraRef: React.RefObject<WebCameraHandler | null>;
-}
-
-interface MatchIssuerResponse {
-  matched?: boolean;
-  issuerName?: string;
-  confidence?: number;
-  sourceFile?: string;
-}
-
-interface MatchContextResponse {
-  matches?: HistoryContextMatch[];
 }
 
 interface GenerateExtractResponse {
@@ -43,47 +32,6 @@ interface GenerateExtractResponse {
     file_group_id?: string;
   };
 }
-
-const replaceIssuerLine = (summary: string, issuerName: string) => {
-  if (!issuerName.trim()) return summary;
-  const lines = summary.split(/\r?\n/);
-  const nextLine = `單位：${issuerName.trim()}`;
-  const issuerIndex = lines.findIndex((line) => /^\s*(?:單位|单位|issuer)\s*[:：]/iu.test(line.trim()));
-  if (issuerIndex >= 0) {
-    lines[issuerIndex] = nextLine;
-    return lines.join("\n");
-  }
-  return [nextLine, ...lines].join("\n");
-};
-
-const fetchIssuerMatch = async (editableSummary: string) => {
-  const response = await fetch("/api/match-issuer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ editableSummary }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Unable to match issuer from history.");
-  }
-
-  return (await response.json()) as MatchIssuerResponse;
-};
-
-const fetchContextMatches = async (editableSummary: string) => {
-  const response = await fetch("/api/match-context", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ editableSummary }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Unable to match related history.");
-  }
-
-  const payload = (await response.json()) as MatchContextResponse;
-  return payload.matches ?? [];
-};
 
 export const useImageCaptureState = (
   onOpenChange?: (open: boolean) => void,
@@ -107,10 +55,6 @@ export const useImageCaptureState = (
   const [selectedSubfolder, setSelectedSubfolder] = useState<SubfolderOption | null>(null);
   const [subfolderLoading, setSubfolderLoading] = useState(false);
   const [subfolderError, setSubfolderError] = useState("");
-  const [matchedIssuerName, setMatchedIssuerName] = useState("");
-  const [matchedIssuerSource, setMatchedIssuerSource] = useState("");
-  const [historyContextMatches, setHistoryContextMatches] = useState<HistoryContextMatch[]>([]);
-  const [historyMatchLoading, setHistoryMatchLoading] = useState(false);
   const [isSubfolderAutoSelected, setIsSubfolderAutoSelected] = useState(true);
 
   const cameraRef = useRef<WebCameraHandler | null>(null);
@@ -144,9 +88,6 @@ export const useImageCaptureState = (
     setAvailableSubfolders([]);
     setSelectedSubfolder(null);
     setSubfolderError("");
-    setMatchedIssuerName("");
-    setMatchedIssuerSource("");
-    setHistoryContextMatches([]);
     setCaptureSource(initialSource);
     setIsProcessingCapture(false);
     onOpenChange?.(false);
@@ -170,9 +111,6 @@ export const useImageCaptureState = (
         setShowGallery(false);
         setSelectedSubfolder(null);
         setIsSubfolderAutoSelected(true);
-        setMatchedIssuerName("");
-        setMatchedIssuerSource("");
-        setHistoryContextMatches([]);
         setImages((prev) => [...prev, { url: previewUrl, file: normalizedFile }]);
       } catch (err) {
         setError(err instanceof CaptureError ? err.message : "Unable to process the image.");
@@ -233,9 +171,6 @@ export const useImageCaptureState = (
 
     setSaveMessage("");
     setError("");
-    setHistoryContextMatches([]);
-    setMatchedIssuerName("");
-    setMatchedIssuerSource("");
     setSummaryImageUrl(null);
     setShowSummaryOverlay(false);
     setTrainingSummary("");
@@ -278,9 +213,6 @@ export const useImageCaptureState = (
       setEditableSummary("");
       setTrainingSummary("");
       setSelectedSubfolder(null);
-      setMatchedIssuerName("");
-      setMatchedIssuerSource("");
-      setHistoryContextMatches([]);
       setShowGallery(false);
       playSuccessChime();
       onOpenChange?.(false);
@@ -352,15 +284,12 @@ export const useImageCaptureState = (
           JSON.stringify({ folder: displayPath, filename: resolvedName }),
         );
         window.dispatchEvent(new Event("upload-confirmation"));
-        setSaveMessage(`uploaded to: ${displayPath} ✅\nname: ${resolvedName} ✅`);
+        setSaveMessage(`uploaded to: ${displayPath} OK\nname: ${resolvedName} OK`);
         setImages([]);
         setDraftSummary("");
         setEditableSummary("");
         setTrainingSummary("");
         setSelectedSubfolder(null);
-        setMatchedIssuerName("");
-        setMatchedIssuerSource("");
-        setHistoryContextMatches([]);
         playSuccessChime();
         onOpenChange?.(false);
         router.push("/");
@@ -397,10 +326,6 @@ export const useImageCaptureState = (
     subfolderLoading,
     subfolderError,
     showSummaryOverlay,
-    matchedIssuerName,
-    matchedIssuerSource,
-    historyContextMatches,
-    historyMatchLoading,
   };
 
   const actions: Actions = {

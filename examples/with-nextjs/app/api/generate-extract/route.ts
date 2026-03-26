@@ -60,7 +60,7 @@ const buildFileGroupId = (doc: Record<string, any>) =>
     .join("-");
 
 const normalizeExtracted = (doc: Record<string, any>) => {
-  const normalized = {
+  const normalized: Record<string, any> = {
     ...doc,
     entities: doc.entities || {},
     incident_keys: Array.isArray(doc.incident_keys) ? doc.incident_keys : [],

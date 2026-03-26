@@ -1,4 +1,4 @@
-import { Loader2, Save, X, RefreshCw, History } from "lucide-react";
+import { Loader2, Save, X, RefreshCw } from "lucide-react";
 import { Button } from "@/ui/components";
 import type { State, Actions } from "./types";
 
@@ -31,34 +31,6 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
         </div>
 
         <div className="space-y-4">
-          <div className="p-3 bg-white/5 rounded-lg border border-white/10 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-300">
-              <History size={14} />
-              HISTORY MATCHES
-              {state.historyMatchLoading && <Loader2 size={14} className="animate-spin" />}
-            </div>
-            {state.matchedIssuerName ? (
-              <p className="text-xs text-white/80">
-                Issuer match: <span className="text-white font-semibold">{state.matchedIssuerName}</span>
-                {state.matchedIssuerSource ? ` from ${state.matchedIssuerSource}` : ""}
-              </p>
-            ) : (
-              <p className="text-xs text-white/50">No issuer history match applied.</p>
-            )}
-            {state.historyContextMatches.length > 0 ? (
-              <div className="space-y-1">
-                {state.historyContextMatches.map((match) => (
-                  <p key={`${match.matchId}-${match.fileName}`} className="text-xs text-white/70">
-                    {match.fileName}
-                    {match.date ? ` (${match.date})` : ""}
-                  </p>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-white/50">No related history references found.</p>
-            )}
-          </div>
-
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-blue-300">EDIT SUMMARY</label>
             <textarea
@@ -116,8 +88,13 @@ export function GalleryView({ state, actions }: { state: State; actions: Actions
       </div>
 
       <div className="p-4 border-t border-white/10">
-        <Button onClick={actions.handleSaveImages} disabled={state.isSaving || !state.editableSummary.trim()} className="app-button w-full h-12">
-          {state.isSaving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} <span className="app-button-label">Save to Drive</span>
+        <Button
+          onClick={actions.handleSaveImages}
+          disabled={state.isSaving || !state.editableSummary.trim()}
+          className="app-button w-full h-12"
+        >
+          {state.isSaving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+          <span className="app-button-label">Save to Drive</span>
         </Button>
       </div>
     </div>
