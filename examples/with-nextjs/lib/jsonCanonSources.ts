@@ -1,7 +1,8 @@
 import path from "path";
 
 const JSON_CANON_BASE_PATH =
-  process.env.JSON_CANON_BASE_PATH || path.join(process.cwd(), "json_canon");
+  process.env.JSON_CANON_BASE_PATH ||
+  path.resolve(process.cwd(), "..", "..", "json_canon");
 
 const buildLocalPath = (fileName: string) => path.join(JSON_CANON_BASE_PATH, fileName);
 
