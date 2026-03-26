@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 import { handleSave } from "@/lib/handleSave";
-import { handleSummary } from "@/lib/handleSummary";
 import { normalizeFilename } from "@/lib/normalizeFilename";
 import { findBestSubfolderMatch } from "@/lib/subfolderMatcher";
 import {
@@ -32,6 +31,17 @@ interface MatchIssuerResponse {
 
 interface MatchContextResponse {
   matches?: HistoryContextMatch[];
+}
+
+interface GenerateExtractResponse {
+  ok?: boolean;
+  error?: string;
+  saved_file_name?: string;
+  targetFolderId?: string | null;
+  extracted?: {
+    subject_category?: string;
+    file_group_id?: string;
+  };
 }
 
 const replaceIssuerLine = (summary: string, issuerName: string) => {
@@ -219,50 +229,73 @@ export const useImageCaptureState = (
   }, []);
 
   const handleSummarize = useCallback(async () => {
+    if (!images.length || isSaving) return;
+
     setSaveMessage("");
     setError("");
     setHistoryContextMatches([]);
     setMatchedIssuerName("");
     setMatchedIssuerSource("");
-
-    const resolvedSummary = await handleSummary({
-      images,
-      setIsSaving,
-      setSummaryImageUrl,
-      setShowSummaryOverlay,
-      setError,
-    });
-
-    if (!resolvedSummary) return;
-
-    setDraftSummary(resolvedSummary);
+    setSummaryImageUrl(null);
+    setShowSummaryOverlay(false);
     setTrainingSummary("");
-
-    let nextSummary = resolvedSummary;
-    setHistoryMatchLoading(true);
+    setIsSaving(true);
 
     try {
-      const issuerMatch = await fetchIssuerMatch(nextSummary);
-      if (issuerMatch.matched && issuerMatch.issuerName) {
-        nextSummary = replaceIssuerLine(nextSummary, issuerMatch.issuerName);
-        setMatchedIssuerName(issuerMatch.issuerName);
-        setMatchedIssuerSource(issuerMatch.sourceFile?.trim() || "");
+      const formData = new FormData();
+      images.forEach((image) => {
+        formData.append("image", image.file);
+      });
+
+      const response = await fetch("/api/generate-extract", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as GenerateExtractResponse | null;
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Unable to generate extract.");
       }
 
-      const contextMatches = await fetchContextMatches(nextSummary);
-      setHistoryContextMatches(contextMatches);
-    } catch (matchError) {
-      console.warn("History matching failed:", matchError);
+      const resolvedFolder =
+        payload?.extracted?.subject_category?.trim() ||
+        payload?.targetFolderId?.split("/").pop() ||
+        "TaiwanPersonal";
+      const resolvedFileName = normalizeFilename(
+        payload?.saved_file_name?.trim() ||
+          `${payload?.extracted?.file_group_id?.trim() || "extract-output"}.json`,
+      );
+
+      sessionStorage.setItem(
+        "uploadConfirmation",
+        JSON.stringify({ folder: resolvedFolder, filename: resolvedFileName }),
+      );
+      window.dispatchEvent(new Event("upload-confirmation"));
+
+      setImages([]);
+      setDraftSummary("");
+      setEditableSummary("");
+      setTrainingSummary("");
+      setSelectedSubfolder(null);
+      setMatchedIssuerName("");
+      setMatchedIssuerSource("");
+      setHistoryContextMatches([]);
+      setShowGallery(false);
+      playSuccessChime();
+      onOpenChange?.(false);
+      router.push("/");
+    } catch (error) {
+      console.error("Failed to generate extract:", error);
+      setError(
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Unable to generate extract.",
+      );
     } finally {
-      setHistoryMatchLoading(false);
+      setIsSaving(false);
     }
-
-    setEditableSummary(nextSummary);
-
-    if (images.length > 0) {
-      setShowGallery(true);
-    }
-  }, [images]);
+  }, [images, isSaving, onOpenChange, router]);
 
   useEffect(() => {
     if (!editableSummary.trim() || !availableSubfolders.length) {
