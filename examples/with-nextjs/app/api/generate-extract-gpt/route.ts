@@ -384,10 +384,29 @@ export async function POST(request: Request) {
       filenameHint,
       hintText,
     });
+    console.log("/api/generate-extract-gpt RAG response:", {
+      filenameHint,
+      hintText,
+      rag_status,
+      rag_error,
+      rag_count: rag.length,
+      rag,
+    });
 
     const { system, user } = buildPrompt({ prompt, oneShot, rag, bible });
     const raw = await callGpt({ images: imageUrls, system, user });
     const parsed = normalizeExtracted(JSON.parse(stripCodeFence(raw)));
+    console.log("/api/generate-extract-gpt extracted RAG-derived fields:", {
+      file_group_id: parsed.file_group_id || "",
+      issuer_name: parsed.issuer_name || "",
+      matched_incidents_count: Array.isArray(parsed.matched_incidents)
+        ? parsed.matched_incidents.length
+        : 0,
+      matched_incidents: parsed.matched_incidents,
+      timeline_count: Array.isArray(parsed.timeline) ? parsed.timeline.length : 0,
+      timeline: parsed.timeline,
+      action_plan: parsed.action_plan || "",
+    });
 
     if (!parsed.file_group_id) {
       return NextResponse.json(
