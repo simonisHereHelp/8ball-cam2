@@ -1,4 +1,4 @@
-import { Camera, CameraOff, Image as ImageIcon, Loader2, RefreshCcw, Save, X } from "lucide-react";
+import { Camera, CameraOff, Database, Image as ImageIcon, Loader2, RefreshCcw, Save, X } from "lucide-react";
 import WebCamera from "@shivantra/react-web-camera";
 import { Button } from "@/ui/components";
 import type { CameraViewProps } from "./types";
@@ -74,6 +74,14 @@ export function CameraView({ state, actions, cameraRef }: CameraViewProps) {
       <div className="p-4 bg-black/80 flex gap-2">
         <Button onClick={actions.handleClose} className="app-button flex-1">
           <X className="mr-2 h-4 w-4" /> <span className="app-button-label">Cancel</span>
+        </Button>
+        <Button onClick={actions.handleQdrant} disabled={state.isSaving} className="app-button flex-1">
+          {state.isSaving ? (
+            <Loader2 className="animate-spin mr-2" />
+          ) : (
+            <Database className="mr-2 h-4 w-4" />
+          )}{" "}
+          <span className="app-button-label">Qdrant</span>
         </Button>
         <Button onClick={actions.handleSummarize} disabled={state.images.length === 0} className="app-button flex-1">
           {state.isSaving ? (

@@ -33,6 +33,13 @@ interface GenerateExtractResponse {
   };
 }
 
+interface GenerateRagContextResponse {
+  ok?: boolean;
+  error?: string;
+  indexedCount?: number;
+  skippedCount?: number;
+}
+
 export const useImageCaptureState = (
   onOpenChange?: (open: boolean) => void,
   initialSource: "camera" | "photos" = "camera",
@@ -165,6 +172,39 @@ export const useImageCaptureState = (
     setSelectedSubfolder(subfolder);
     setIsSubfolderAutoSelected(false);
   }, []);
+
+  const handleQdrant = useCallback(async () => {
+    if (isSaving) return;
+
+    setSaveMessage("");
+    setError("");
+    setIsSaving(true);
+
+    try {
+      const response = await fetch("/api/generate-rag-context", {
+        method: "POST",
+      });
+
+      const payload = (await response.json().catch(() => null)) as GenerateRagContextResponse | null;
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Unable to generate RAG context.");
+      }
+
+      const indexedCount = payload?.indexedCount ?? 0;
+      const skippedCount = payload?.skippedCount ?? 0;
+      setSaveMessage(`Qdrant indexed: ${indexedCount}, skipped: ${skippedCount}`);
+    } catch (error) {
+      console.error("Failed to generate RAG context:", error);
+      setError(
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Unable to generate RAG context.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving]);
 
   const handleSummarize = useCallback(async () => {
     if (!images.length || isSaving) return;
@@ -333,6 +373,7 @@ export const useImageCaptureState = (
     handleCapture,
     handleAlbumSelect,
     handleCameraSwitch,
+    handleQdrant,
     handleSummarize,
     handleSaveImages,
     handleClose,

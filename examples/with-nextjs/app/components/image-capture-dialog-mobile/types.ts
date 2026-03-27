@@ -40,6 +40,7 @@ export interface Actions {
   handleCapture: () => Promise<void>;
   handleCameraSwitch: () => Promise<void>;
   handleAlbumSelect: (files: FileList | null) => Promise<void>;
+  handleQdrant: () => Promise<void>;
   handleSummarize: () => Promise<void>;
   handleSaveImages: () => Promise<void>;
   handleClose: () => void;

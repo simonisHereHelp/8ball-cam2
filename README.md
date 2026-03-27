@@ -138,6 +138,15 @@ The `/api/summarize` route expects a `prompts.json` file hosted at a reachable U
 
 An example file lives at `prompts.example.json`. Copy it to Google Drive, share it publicly, and set `PROMPTS_URL` accordingly. If the URL cannot be fetched at runtime, the API falls back to a built-in summarization prompt.
 
+## RAG indexing reminder
+
+After you run `/api/generate-rag-context`, Vercel logs should show lines like:
+
+```text
+"/api/generate-rag-context Qdrant upsert:"
+"/api/generate-rag-context indexing summary:"
+```
+
 
 ## Why?
 
