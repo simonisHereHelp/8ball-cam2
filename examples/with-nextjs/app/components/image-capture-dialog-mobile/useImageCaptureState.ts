@@ -182,7 +182,7 @@ export const useImageCaptureState = (
         formData.append("image", image.file);
       });
 
-      const response = await fetch("/api/generate-extract", {
+      const response = await fetch("/api/generate-extract-gpt", {
         method: "POST",
         body: formData,
       });
