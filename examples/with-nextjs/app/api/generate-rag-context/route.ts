@@ -179,6 +179,13 @@ const ensureQdrantCollection = async () => {
     },
   );
 
+  if (response.status === 409) {
+    console.log("/api/generate-rag-context collection already exists, continuing:", {
+      collection: QDRANT_COLLECTION,
+    });
+    return;
+  }
+
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(`Failed to ensure Qdrant collection: ${response.status} ${text}`);
