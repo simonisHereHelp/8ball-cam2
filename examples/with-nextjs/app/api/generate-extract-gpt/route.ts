@@ -330,9 +330,14 @@ const resolveImages = async (request: Request) => {
     }),
   );
 
+  const inferredFilenameHint = uniqueImageFiles
+    .map((file) => file.name?.trim() || "")
+    .filter(Boolean)
+    .join(" ");
+
   return {
     imageUrls,
-    filenameHint: String(formData.get("filename_hint") || ""),
+    filenameHint: String(formData.get("filename_hint") || inferredFilenameHint),
     hintText: String(formData.get("hint_text") || ""),
   };
 };
