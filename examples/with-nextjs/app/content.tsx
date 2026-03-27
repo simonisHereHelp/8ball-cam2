@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Camera } from "lucide-react";
+import { Camera, Database, Loader2 } from "lucide-react";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 import { Button } from "@/ui/components";
@@ -29,6 +29,8 @@ function Content() {
   const [dialogSource, setDialogSource] = useState<"camera" | "photos" | null>(
     null,
   );
+  const [isIndexingQdrant, setIsIndexingQdrant] = useState(false);
+  const [qdrantMessage, setQdrantMessage] = useState("");
   const [uploadConfirmation, setUploadConfirmation] = useState<{
     folder: string;
     filename: string;
@@ -39,6 +41,49 @@ function Content() {
 
   const handleOpen = (source: "camera" | "photos") => setDialogSource(source);
   const handleClose = () => setDialogSource(null);
+
+  const handleQdrant = async () => {
+    if (isIndexingQdrant) return;
+
+    setUploadConfirmation(null);
+    setQdrantMessage("");
+    setIsIndexingQdrant(true);
+
+    try {
+      const response = await fetch("/api/generate-rag-context", {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            indexedCount?: number;
+            skippedCount?: number;
+            totalIndexedTokens?: number;
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Unable to generate RAG context.");
+      }
+
+      const indexedCount = payload?.indexedCount ?? 0;
+      const skippedCount = payload?.skippedCount ?? 0;
+      const totalIndexedTokens = payload?.totalIndexedTokens ?? 0;
+      setQdrantMessage(
+        `Qdrant indexed ${indexedCount} files, skipped ${skippedCount}, approx tokens ${totalIndexedTokens}`,
+      );
+    } catch (error) {
+      console.error("Failed to generate RAG context:", error);
+      setQdrantMessage(
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Unable to generate RAG context.",
+      );
+    } finally {
+      setIsIndexingQdrant(false);
+    }
+  };
 
   useEffect(() => {
     const loadConfirmation = () => {
@@ -113,12 +158,28 @@ function Content() {
                   >
                     <span className="app-button-label">Photo Album</span>
                   </Button>
+                  <Button
+                    onClick={handleQdrant}
+                    disabled={isIndexingQdrant || !session}
+                    className="app-button h-12 !px-8 !py-3 text-lg font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
+                  >
+                    {isIndexingQdrant ? (
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    ) : (
+                      <Database className="w-5 h-5 mr-2" />
+                    )}
+                    <span className="app-button-label">Qdrant</span>
+                  </Button>
                 </div>
                 {uploadConfirmation ? (
                   <div className="text-sm text-slate-500 dark:text-slate-400 space-y-1">
                     <p>upload to {uploadConfirmation.folder}</p>
                     <p>filename: {uploadConfirmation.filename}</p>
                   </div>
+                ) : qdrantMessage ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {qdrantMessage}
+                  </p>
                 ) : (
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {isMobile
