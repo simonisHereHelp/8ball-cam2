@@ -24,6 +24,45 @@ interface DriveFileRow {
   parents?: string[];
 }
 
+const flattenStringArray = (value: unknown) =>
+  Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+
+const collectEntityTerms = (entities: unknown) => {
+  if (!entities || typeof entities !== "object") return [] as string[];
+
+  const typed = entities as Record<string, unknown>;
+  return [
+    ...flattenStringArray(typed.persons),
+    ...flattenStringArray(typed.orgs),
+    ...flattenStringArray(typed.accounts),
+    ...flattenStringArray(typed.addresses),
+    ...flattenStringArray(typed.phones),
+  ];
+};
+
+const collectPageText = (pages: unknown) => {
+  if (!Array.isArray(pages)) return [] as string[];
+
+  return pages.flatMap((page) => {
+    if (!page || typeof page !== "object") return [];
+
+    const typed = page as Record<string, unknown>;
+    const sections = Array.isArray(typed.sections)
+      ? typed.sections
+          .flatMap((section) => {
+            if (!section || typeof section !== "object") return [];
+            const typedSection = section as Record<string, unknown>;
+            return [typedSection.section_title, typedSection.content]
+              .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+          })
+      : [];
+
+    return [typed.text, ...sections].filter(
+      (entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
+    );
+  });
+};
+
 const buildFolderPath = (slugOrPath: string, base: string) => {
   if (!slugOrPath) return base;
   if (slugOrPath.startsWith(`${base}/`) || slugOrPath === base) return slugOrPath;
@@ -192,11 +231,16 @@ const ensureQdrantCollection = async () => {
   }
 };
 
-const buildIndexText = (doc: Record<string, any>, fileName: string, drivePath: string, topic: string) =>
-  [
+const buildIndexText = (doc: Record<string, any>, fileName: string, drivePath: string, topic: string) => {
+  const incidentKeys = flattenStringArray(doc.incident_keys);
+  const entityTerms = collectEntityTerms(doc.entities);
+  const pageTerms = collectPageText(doc.pages);
+
+  return [
     topic,
     drivePath,
     fileName,
+    doc.file_group_id || "",
     doc.issuer_name || "",
     doc.issuer_alias || "",
     doc.subject_category || "",
@@ -205,10 +249,13 @@ const buildIndexText = (doc: Record<string, any>, fileName: string, drivePath: s
     doc.doc_date || "",
     doc.title || "",
     doc.summary || "",
-    Array.isArray(doc.incident_keys) ? doc.incident_keys.join(" ") : "",
+    incidentKeys.join(" "),
+    entityTerms.join(" "),
+    pageTerms.join("\n"),
   ]
     .filter(Boolean)
     .join("\n");
+};
 
 const approximateTokenCount = (text: string) => Math.max(1, Math.round(text.length / 4));
 
@@ -293,7 +340,10 @@ export async function POST() {
                 doc_date: doc.doc_date || "",
                 title: doc.title || "",
                 summary: doc.summary || "",
-                incident_keys: Array.isArray(doc.incident_keys) ? doc.incident_keys : [],
+                incident_keys: flattenStringArray(doc.incident_keys),
+                entities: doc.entities && typeof doc.entities === "object" ? doc.entities : {},
+                entity_terms: collectEntityTerms(doc.entities),
+                pages_text: collectPageText(doc.pages),
                 file_group_id: doc.file_group_id || "",
               },
             },
@@ -323,6 +373,9 @@ export async function POST() {
               "title",
               "summary",
               "incident_keys",
+              "entities",
+              "entity_terms",
+              "pages_text",
               "file_group_id",
             ],
           });
