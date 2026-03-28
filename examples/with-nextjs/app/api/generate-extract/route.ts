@@ -11,13 +11,14 @@ import {
   SUBJECT_CAT_DOC_CLASS_ACTION_VERB_SOURCE,
 } from "@/lib/jsonCanonSources";
 import { normalizeFilename } from "@/lib/normalizeFilename";
+import { LEGACY_QDRANT_COLLECTION } from "@/lib/qdrantCollections";
 
 export const runtime = "nodejs";
 
 const QDRANT_URL =
   process.env.QDRANT_URL ||
   "https://09d1087a-9021-40cf-a060-5c3d33f14a8c.us-west-1-0.aws.cloud.qdrant.io:6333";
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION_NAME || "documents";
+const QDRANT_COLLECTION = LEGACY_QDRANT_COLLECTION;
 const QDRANT_VECTOR_SIZE = Number(process.env.QDRANT_VECTOR_SIZE || 384);
 const FALLBACK_SUBFOLDER_TOPIC = "TaiwanPersonal";
 const DEFAULT_IMAGE_MODEL = process.env.GENERATE_EXTRACT_MODEL || "minicpm-v";

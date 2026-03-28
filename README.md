@@ -140,6 +140,8 @@ An example file lives at `prompts.example.json`. Copy it to Google Drive, share 
 
 ## RAG indexing reminder
 
+OpenAI-backed RAG routes now default to a separate collection name such as `documents_openai_1536`, while the legacy 384-dim route continues using `documents`. If you want to override that split, set `OPENAI_QDRANT_COLLECTION_NAME` for the OpenAI routes or `LEGACY_QDRANT_COLLECTION_NAME` for the older route.
+
 After you run `/api/generate-rag-context`, Vercel logs should show lines like:
 
 ```text

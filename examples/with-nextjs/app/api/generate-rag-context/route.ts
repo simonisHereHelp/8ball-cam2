@@ -7,6 +7,7 @@ import {
   OPENAI_EMBEDDING_DIMENSIONS,
   OPENAI_EMBEDDING_MODEL,
 } from "@/lib/openaiEmbeddings";
+import { OPENAI_QDRANT_COLLECTION } from "@/lib/qdrantCollections";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -14,7 +15,7 @@ export const runtime = "nodejs";
 const QDRANT_URL =
   process.env.QDRANT_URL ||
   "https://09d1087a-9021-40cf-a060-5c3d33f14a8c.us-west-1-0.aws.cloud.qdrant.io:6333";
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION_NAME || "documents";
+const QDRANT_COLLECTION = OPENAI_QDRANT_COLLECTION;
 const BASE_DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID || "";
 
 interface ActiveSubfolder {
@@ -249,7 +250,7 @@ const ensureQdrantCollection = async () => {
 
     if (existingSize && existingSize !== OPENAI_EMBEDDING_DIMENSIONS) {
       throw new Error(
-        `Qdrant collection '${QDRANT_COLLECTION}' already exists with vector size ${existingSize}, but ${OPENAI_EMBEDDING_MODEL} expects ${OPENAI_EMBEDDING_DIMENSIONS}. Rebuild the collection or use a new QDRANT_COLLECTION_NAME.`,
+        `Qdrant collection '${QDRANT_COLLECTION}' already exists with vector size ${existingSize}, but ${OPENAI_EMBEDDING_MODEL} expects ${OPENAI_EMBEDDING_DIMENSIONS}. Rebuild that collection, or point the OpenAI routes at a fresh collection with OPENAI_QDRANT_COLLECTION_NAME.`,
       );
     }
 
