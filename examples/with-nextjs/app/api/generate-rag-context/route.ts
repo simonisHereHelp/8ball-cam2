@@ -1,6 +1,12 @@
+import { createHash } from "crypto";
 import { auth } from "@/auth";
 import { GPT_Router } from "@/lib/gptRouter";
 import { DRIVE_ACTIVE_SUBFOLDER_SOURCE } from "@/lib/jsonCanonSources";
+import {
+  embedTextWithOpenAI,
+  OPENAI_EMBEDDING_DIMENSIONS,
+  OPENAI_EMBEDDING_MODEL,
+} from "@/lib/openaiEmbeddings";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -9,7 +15,6 @@ const QDRANT_URL =
   process.env.QDRANT_URL ||
   "https://09d1087a-9021-40cf-a060-5c3d33f14a8c.us-west-1-0.aws.cloud.qdrant.io:6333";
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION_NAME || "documents";
-const QDRANT_VECTOR_SIZE = Number(process.env.QDRANT_VECTOR_SIZE || 384);
 const BASE_DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID || "";
 
 interface ActiveSubfolder {
@@ -23,6 +28,17 @@ interface DriveFileRow {
   mimeType?: string;
   parents?: string[];
 }
+
+const toStablePointId = (value: string) => {
+  const hash = createHash("sha256").update(value).digest("hex");
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    hash.slice(12, 16),
+    hash.slice(16, 20),
+    hash.slice(20, 32),
+  ].join("-");
+};
 
 const flattenStringArray = (value: unknown) =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
@@ -83,16 +99,6 @@ const getAccessToken = async () => {
   const accessToken = (session as any)?.accessToken as string | undefined;
   if (!accessToken) throw new Error("Missing Google Drive access token on session.");
   return accessToken;
-};
-
-const embedText = async (text: string) => {
-  const vector = new Array(QDRANT_VECTOR_SIZE).fill(0);
-  for (let index = 0; index < text.length; index += 1) {
-    vector[index % QDRANT_VECTOR_SIZE] += text.charCodeAt(index) % 97;
-  }
-
-  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
-  return vector.map((value) => value / norm);
 };
 
 const listFolderEntries = async (folderId: string, accessToken: string) => {
@@ -210,7 +216,7 @@ const ensureQdrantCollection = async () => {
       },
       body: JSON.stringify({
         vectors: {
-          size: QDRANT_VECTOR_SIZE,
+          size: OPENAI_EMBEDDING_DIMENSIONS,
           distance: "Cosine",
         },
       }),
@@ -219,8 +225,38 @@ const ensureQdrantCollection = async () => {
   );
 
   if (response.status === 409) {
+    const inspectResponse = await fetch(
+      `${QDRANT_URL.replace(/\/+$/, "")}/collections/${encodeURIComponent(QDRANT_COLLECTION)}`,
+      {
+        headers: {
+          ...(process.env.QDRANT_API_KEY ? { "api-key": process.env.QDRANT_API_KEY } : {}),
+        },
+        cache: "no-store",
+      },
+    );
+
+    if (!inspectResponse.ok) {
+      const text = await inspectResponse.text().catch(() => "");
+      throw new Error(
+        `Failed to inspect existing Qdrant collection '${QDRANT_COLLECTION}': ${inspectResponse.status} ${text}`,
+      );
+    }
+
+    const inspectJson = (await inspectResponse.json().catch(() => null)) as
+      | { result?: { config?: { params?: { vectors?: { size?: number } } } } }
+      | null;
+    const existingSize = inspectJson?.result?.config?.params?.vectors?.size;
+
+    if (existingSize && existingSize !== OPENAI_EMBEDDING_DIMENSIONS) {
+      throw new Error(
+        `Qdrant collection '${QDRANT_COLLECTION}' already exists with vector size ${existingSize}, but ${OPENAI_EMBEDDING_MODEL} expects ${OPENAI_EMBEDDING_DIMENSIONS}. Rebuild the collection or use a new QDRANT_COLLECTION_NAME.`,
+      );
+    }
+
     console.log("/api/generate-rag-context collection already exists, continuing:", {
       collection: QDRANT_COLLECTION,
+      existingVectorSize: existingSize || OPENAI_EMBEDDING_DIMENSIONS,
+      embeddingModel: OPENAI_EMBEDDING_MODEL,
     });
     return;
   }
@@ -321,11 +357,11 @@ export async function POST() {
           const doc = JSON.parse(raw) as Record<string, any>;
           const indexText = buildIndexText(doc, file.name, file.drivePath, subfolder.topic);
           const approxTokens = approximateTokenCount(indexText);
-          const vector = await embedText(indexText);
+          const vector = await embedTextWithOpenAI(indexText);
 
           await upsertQdrantPoints([
             {
-              id: file.id,
+              id: toStablePointId(file.id),
               vector,
               payload: {
                 drive_file_id: file.id,
@@ -359,6 +395,7 @@ export async function POST() {
             vectorSize: vector.length,
             indexedChars: indexText.length,
             approxIndexedTokens: approxTokens,
+            embeddingModel: OPENAI_EMBEDDING_MODEL,
             payloadKeys: [
               "drive_file_id",
               "drive_path",
@@ -395,7 +432,8 @@ export async function POST() {
       totalIndexedTokens,
       averageIndexedTokensPerFile: indexedCount ? Math.round(totalIndexedTokens / indexedCount) : 0,
       qdrantCollection: QDRANT_COLLECTION,
-      qdrantVectorSize: QDRANT_VECTOR_SIZE,
+      qdrantVectorSize: OPENAI_EMBEDDING_DIMENSIONS,
+      embeddingModel: OPENAI_EMBEDDING_MODEL,
       indexedFolders,
       skippedFiles,
     });
@@ -408,7 +446,8 @@ export async function POST() {
       totalIndexedChars,
       totalIndexedTokens,
       averageIndexedTokensPerFile: indexedCount ? Math.round(totalIndexedTokens / indexedCount) : 0,
-      qdrantVectorSize: QDRANT_VECTOR_SIZE,
+      qdrantVectorSize: OPENAI_EMBEDDING_DIMENSIONS,
+      embeddingModel: OPENAI_EMBEDDING_MODEL,
       indexedFolders,
       skippedFiles,
     });

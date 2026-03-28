@@ -11,6 +11,11 @@ import {
 } from "@/lib/jsonCanonSources";
 import { normalizeFilename } from "@/lib/normalizeFilename";
 import { GPT_Router } from "@/lib/gptRouter";
+import {
+  embedTextWithOpenAI,
+  OPENAI_EMBEDDING_DIMENSIONS,
+  OPENAI_EMBEDDING_MODEL,
+} from "@/lib/openaiEmbeddings";
 
 export const runtime = "nodejs";
 
@@ -20,7 +25,6 @@ const QDRANT_URL =
   process.env.QDRANT_URL ||
   "https://09d1087a-9021-40cf-a060-5c3d33f14a8c.us-west-1-0.aws.cloud.qdrant.io:6333";
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION_NAME || "documents";
-const QDRANT_VECTOR_SIZE = Number(process.env.QDRANT_VECTOR_SIZE || 384);
 const FALLBACK_SUBFOLDER_TOPIC = "TaiwanPersonal";
 
 interface RagCandidate {
@@ -73,16 +77,6 @@ const normalizeExtracted = (doc: Record<string, any>) => {
   }
 
   return normalized;
-};
-
-const embedText = async (text: string) => {
-  const vector = new Array(QDRANT_VECTOR_SIZE).fill(0);
-  for (let index = 0; index < text.length; index += 1) {
-    vector[index % QDRANT_VECTOR_SIZE] += text.charCodeAt(index) % 97;
-  }
-
-  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
-  return vector.map((value) => value / norm);
 };
 
 const buildQuery = ({
@@ -156,7 +150,7 @@ const getRagContextWithFallback = async ({
   }
 
   try {
-    const vector = await embedText(query);
+    const vector = await embedTextWithOpenAI(query);
     const response = await fetch(
       `${QDRANT_URL.replace(/\/+$/, "")}/collections/${encodeURIComponent(QDRANT_COLLECTION)}/points/search`,
       {
@@ -178,6 +172,11 @@ const getRagContextWithFallback = async ({
 
     if (!response.ok) {
       const details = await response.text().catch(() => "");
+      if (response.status === 400 && /vector|dimension|size/i.test(details)) {
+        throw new Error(
+          `Qdrant vector size mismatch for collection '${QDRANT_COLLECTION}'. Expected ${OPENAI_EMBEDDING_DIMENSIONS} dimensions for ${OPENAI_EMBEDDING_MODEL}. Rebuild the collection or use a new QDRANT_COLLECTION_NAME.`,
+        );
+      }
       throw new Error(`Qdrant search failed (${response.status}): ${details || response.statusText}`);
     }
 
