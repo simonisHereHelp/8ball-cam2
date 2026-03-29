@@ -11,6 +11,12 @@ import {
 import { normalizeFilename } from "@/lib/normalizeFilename";
 import { GPT_Router } from "@/lib/gptRouter";
 import {
+  buildRoutingSummary,
+  deriveIssuerFromFilenameHint,
+  inferFilenameHintFromFiles,
+  shouldPreferFilenameIssuer,
+} from "@/lib/extractRouting";
+import {
   embedTextWithOpenAI,
   OPENAI_EMBEDDING_DIMENSIONS,
   OPENAI_EMBEDDING_MODEL,
@@ -324,10 +330,7 @@ const resolveImages = async (request: Request) => {
     }),
   );
 
-  const inferredFilenameHint = uniqueImageFiles
-    .map((file) => file.name?.trim() || "")
-    .filter(Boolean)
-    .join(" ");
+  const inferredFilenameHint = inferFilenameHintFromFiles(uniqueImageFiles);
 
   return {
     imageUrls,
@@ -366,6 +369,27 @@ export async function POST(request: Request) {
     const { system, user } = buildPrompt({ prompt, oneShot, rag, bible });
     const raw = await callGpt({ images: imageUrls, system, user });
     const parsed = normalizeExtracted(JSON.parse(stripCodeFence(raw)));
+    const filenameIssuer = deriveIssuerFromFilenameHint(filenameHint);
+    const issuerEvidence = [
+      parsed.title,
+      parsed.summary,
+      ...(Array.isArray(parsed.pages)
+        ? parsed.pages.map((page: any) => (typeof page?.text === "string" ? page.text : ""))
+        : []),
+    ]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .join("\n");
+
+    if (
+      filenameIssuer &&
+      shouldPreferFilenameIssuer(parsed.issuer_name || "", filenameIssuer, issuerEvidence)
+    ) {
+      parsed.issuer_name = filenameIssuer;
+      if (!parsed.issuer_alias || !String(parsed.issuer_alias).trim()) {
+        parsed.issuer_alias = filenameIssuer;
+      }
+      parsed.file_group_id = buildFileGroupId(parsed);
+    }
     console.log("/api/generate-extract-gpt extracted RAG-derived fields:", {
       file_group_id: parsed.file_group_id || "",
       issuer_name: parsed.issuer_name || "",
@@ -385,17 +409,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const routingSummary = [
-      parsed.subject_category,
-      parsed.issuer_name,
-      parsed.doc_class,
-      parsed.actionable_in_verb,
-      parsed.summary,
-      hintText,
-      filenameHint,
-    ]
-      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-      .join("\n");
+    const routingSummary = buildRoutingSummary({ parsed, hintText, filenameHint });
     const { folderId: targetFolderId, topic: targetTopic } = await resolveDriveFolder(routingSummary);
     const fileName = normalizeFilename(`${parsed.file_group_id}.json`);
     const jsonPayload = JSON.stringify(parsed, null, 2);

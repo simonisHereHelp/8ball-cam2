@@ -55,7 +55,7 @@ export const PROMPT_DESIGNATED_SUBFOLDER_SOURCE = resolveJsonSource(
 export const DRIVE_ACTIVE_SUBFOLDER_SOURCE = resolveJsonSource(
   process.env.DRIVE_ACTIVE_SUBFOLDER_PATH,
   process.env.DRIVE_ACTIVE_SUBFOLDER_ID,
-  "drive_active_subfolders.json",
+  "drive_active_subfolder_list.json",
 );
 
 export const DRIVE_FALLBACK_FOLDER_ID =
