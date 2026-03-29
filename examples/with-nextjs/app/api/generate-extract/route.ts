@@ -5,13 +5,13 @@ import { NextResponse } from "next/server";
 import { driveSaveFiles } from "@/lib/driveSaveFiles";
 import { GPT_Router } from "@/lib/gptRouter";
 import {
-  DRIVE_ACTIVE_SUBFOLDER_SOURCE,
   ONE_SHOT_EXAMPLE_SOURCE,
   PROMPT_EXTRACT_SOURCE,
   SUBJECT_CAT_DOC_CLASS_ACTION_VERB_SOURCE,
 } from "@/lib/jsonCanonSources";
 import { normalizeFilename } from "@/lib/normalizeFilename";
 import { LEGACY_QDRANT_COLLECTION } from "@/lib/qdrantCollections";
+import { resolveDriveFolder } from "@/lib/driveSubfolderResolver";
 
 export const runtime = "nodejs";
 
@@ -20,7 +20,6 @@ const QDRANT_URL =
   "https://09d1087a-9021-40cf-a060-5c3d33f14a8c.us-west-1-0.aws.cloud.qdrant.io:6333";
 const QDRANT_COLLECTION = LEGACY_QDRANT_COLLECTION;
 const QDRANT_VECTOR_SIZE = Number(process.env.QDRANT_VECTOR_SIZE || 384);
-const FALLBACK_SUBFOLDER_TOPIC = "TaiwanPersonal";
 const DEFAULT_IMAGE_MODEL = process.env.GENERATE_EXTRACT_MODEL || "minicpm-v";
 
 interface RagCandidate {
@@ -30,11 +29,6 @@ interface RagCandidate {
   doc_class: string;
   actionable_in_verb: string;
   avg_score: number;
-}
-
-interface ActiveSubfolder {
-  topic: string;
-  folderId?: string;
 }
 
 const isImageUnsupportedError = (message: string) =>
@@ -332,35 +326,6 @@ const resolveImages = async (request: Request) => {
   };
 };
 
-const resolveTaiwanPersonalFolder = async () => {
-  const config = await GPT_Router.fetchJsonSource(DRIVE_ACTIVE_SUBFOLDER_SOURCE).catch(() => null);
-  const subfolders = Array.isArray((config as { subfolders?: ActiveSubfolder[] } | null)?.subfolders)
-    ? ((config as { subfolders?: ActiveSubfolder[] }).subfolders as ActiveSubfolder[])
-    : Array.isArray(config)
-      ? (config as ActiveSubfolder[])
-      : [];
-
-  const baseFolderId = process.env.DRIVE_FOLDER_ID;
-  if (!baseFolderId) {
-    throw new Error("Missing DRIVE_FOLDER_ID");
-  }
-
-  const selected = subfolders.find(
-    (entry) => entry.topic.toLowerCase() === FALLBACK_SUBFOLDER_TOPIC.toLowerCase(),
-  );
-
-  const segment = selected?.folderId || selected?.topic || FALLBACK_SUBFOLDER_TOPIC;
-  if (segment.startsWith(`${baseFolderId}/`) || segment === baseFolderId) {
-    return segment;
-  }
-
-  if (segment.includes("/")) {
-    return segment;
-  }
-
-  return `${baseFolderId}/${segment}`;
-};
-
 export async function POST(request: Request) {
   try {
     const { imageUrls, filenameHint, hintText } = await resolveImages(request);
@@ -391,7 +356,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const targetFolderId = await resolveTaiwanPersonalFolder();
+    const routingSummary = [
+      parsed.subject_category,
+      parsed.issuer_name,
+      parsed.doc_class,
+      parsed.actionable_in_verb,
+      parsed.summary,
+      hintText,
+      filenameHint,
+    ]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .join("\n");
+    const { folderId: targetFolderId, topic: targetTopic } = await resolveDriveFolder(routingSummary);
     const fileName = normalizeFilename(`${parsed.file_group_id}.json`);
     const jsonPayload = JSON.stringify(parsed, null, 2);
     const uploadFile = new File([jsonPayload], fileName, { type: "application/json" });
@@ -414,6 +390,7 @@ export async function POST(request: Request) {
       rag_error,
       saved_file_name: fileName,
       targetFolderId,
+      targetTopic,
     });
   } catch (error: any) {
     console.error("/api/generate-extract failed:", error);

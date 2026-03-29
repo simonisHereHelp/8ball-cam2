@@ -27,6 +27,7 @@ interface GenerateExtractResponse {
   error?: string;
   saved_file_name?: string;
   targetFolderId?: string | null;
+  targetTopic?: string | null;
   extracted?: {
     subject_category?: string;
     file_group_id?: string;
@@ -194,6 +195,7 @@ export const useImageCaptureState = (
       }
 
       const resolvedFolder =
+        payload?.targetTopic?.trim() ||
         payload?.extracted?.subject_category?.trim() ||
         payload?.targetFolderId?.split("/").pop() ||
         "TaiwanPersonal";
